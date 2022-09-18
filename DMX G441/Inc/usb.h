@@ -1,24 +1,55 @@
-
 #ifndef __USB_H
 #define __USB_H
 
-#define USB_SETUP_DIR_Msk 0x80
-#define USB_SETUP_TYPE_Msk 0x60
-#define USB_SETUP_REC_Msk 0x1F
+typedef struct {
+    unsigned char RequestType;
+    unsigned char Request;
+    union {
+        unsigned short Value;
+        struct {
+            unsigned char DescriptorIndex;
+            unsigned char DescriptorType;
+        };
+    };
+    unsigned short Index;
+    unsigned short Length;
+} USB_SETUP_PACKET;
 
-#define USB_SETUP_DIR_RX 0x00
-#define USB_SETUP_DIR_TX 0x80
-#define USB_SETUP_TYPE_DEV 0x00
-#define USB_SETUP_TYPE_CLS 0x20
-#define USB_SETUP_TYPE_VEN 0x40
-#define USB_SETUP_REC_DEV 0x00
-#define USB_SETUP_REC_INT 0x01
-#define USB_SETUP_REC_EP 0x02
-#define USB_SETUP_REC_OTHER 0x03
+typedef struct {
+    unsigned char EP;
+    unsigned char RxBufferSize;
+    unsigned char TxBufferSize;
+    unsigned short Type;
+    void (*RxCallback)(char ep, short length);
+} USB_CONFIG_EP;
 
+#define USB_OK 0
+#define USB_BUSY 1
+#define USB_ERR 2
+
+/// @brief Initialize all USB related stuff
 void USB_Init();
-
-void USB_HP_IRQHandler();
+/// @brief Low Priority handler for most interrupts
 void USB_LP_IRQHandler();
-void USBWakeUp_IRQHandler();
+/// @brief High Priority handler for Burst and Isochronous transfers
+void USB_HP_IRQHandler();
+
+/// @brief Transmit some data of arbitrary length
+/// @param ep The endpoint id
+/// @param buffer A pointer to the buffer containing the data
+/// @param length The number of bytes to sent
+/// @remark Will automatically split the transmission into multiple chunks if necessary
+void USB_Transmit(char ep, char* buffer, short length);
+/// @brief Whether there is currently any unfinished transfer running
+/// @param ep The endpoint to check
+/// @remark Do not busy-wait on this during reception. It will stall the USB-ISR
+char USB_IsTransmitPending(char ep);
+/// @brief Get data out of the reception buffers
+/// @param ep The endpoint id to fetch data from
+/// @param buffer The target buffer to write to
+/// @param length The length of the buffer. Will contain the number of bytes read
+void USB_Fetch(char ep, char* buffer, short *length);
+/// @brief Configure an endpoint
+void USB_SetEPConfig(USB_CONFIG_EP config);
+
 #endif

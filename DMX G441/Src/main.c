@@ -10,9 +10,16 @@ static void GPIO_Init(void);
  * @retval int
  */
 int main(void) {
+    char portConfig[] = {
+        USART_OUTPUT,
+        USART_OUTPUT,
+        USART_OUTPUT,
+        USART_INPUT
+    };
+
     Clock_Init();
     GPIO_Init();
-    USART_Init();
+    USART_Init(portConfig);
     USB_Init();
 
     while (1) {
