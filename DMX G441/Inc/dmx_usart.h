@@ -6,26 +6,28 @@
 typedef enum {
     USART_DMX_STATE_UNCONFIGURED = 0,
     USART_DMX_STATE_Pause = 1,
-    USART_DMX_STATE_DMX = 2    
+    USART_DMX_STATE_DMX = 2
 } USART_DMX_State;
 
 typedef struct {
-    USART_TypeDef* Usart;
-    GPIO_TypeDef* DRPort;
-    DMAMUX_Channel_TypeDef* DmaMux;
-    DMA_Channel_TypeDef* Dma;
-    char* DmxBuffer;
+    USART_TypeDef *Usart;
+    GPIO_TypeDef *DRPort;
+    GPIO_TypeDef *RxPort;
+    DMAMUX_Channel_TypeDef *DmaMux;
+    DMA_Channel_TypeDef *Dma;
+    char *DmxBuffer;
 
     char DmaMux_RX;
     char DmaMux_TX;
     USART_DMX_State State;
     char IOType;
     IRQn_Type Irq;
-    
+
     short DmaIFCR_Offset;
     short DRPin;
+    short RxPin;
+    char BreakStatus;
 } USART_DmxConfig;
-
 
 #define USART_OUTPUT 0x02
 #define USART_INPUT 0x04
@@ -33,7 +35,10 @@ typedef struct {
 void USART_Init(char *portDirection);
 
 void USART_SetPortState(char port, char enable);
-void USART_SetBufferPage(char port, char page, char* buffer);
+void USART_SetBufferPage(char port, char page, char *buffer);
+char *USART_GetDmxBuffer(char port);
+
+void USART_BusyCheck();
 
 void USART1_IRQHandler();
 void USART2_IRQHandler();

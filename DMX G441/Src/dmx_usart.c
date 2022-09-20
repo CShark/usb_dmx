@@ -1,13 +1,15 @@
 #include "dmx_usart.h"
 
 __PACKED
-char dmx_buffer[4][512] = {{0}, {0}, {0}, {0}};
+static char dmx_buffer[4][513] = {{0}, {0}, {0}, {0}};
 
 USART_DmxConfig dmx_config[] = {
     {.Usart = USART1,
      .Irq = USART1_IRQn,
      .DRPort = GPIOB,
      .DRPin = 5,
+     .RxPort = GPIOB,
+     .RxPin = 7,
 
      .DmxBuffer = dmx_buffer[0],
 
@@ -20,6 +22,10 @@ USART_DmxConfig dmx_config[] = {
      .Irq = USART2_IRQn,
      .DRPort = GPIOC,
      .DRPin = 12,
+     .RxPort = GPIOB,
+     .RxPin = 4,
+
+     .DmxBuffer = dmx_buffer[1],
 
      .DmaMux = DMAMUX1_Channel1,
      .DmaMux_RX = 26,
@@ -30,6 +36,10 @@ USART_DmxConfig dmx_config[] = {
      .Irq = UART4_IRQn,
      .DRPort = GPIOA,
      .DRPin = 15,
+     .RxPort = GPIOC,
+     .RxPin = 11,
+
+     .DmxBuffer = dmx_buffer[2],
 
      .DmaMux = DMAMUX1_Channel2,
      .DmaMux_RX = 30,
@@ -40,6 +50,10 @@ USART_DmxConfig dmx_config[] = {
      .Irq = USART3_IRQn,
      .DRPort = GPIOB,
      .DRPin = 12,
+     .RxPort = GPIOB,
+     .RxPin = 11,
+
+     .DmxBuffer = dmx_buffer[3],
 
      .DmaMux = DMAMUX1_Channel3,
      .DmaMux_RX = 28,
@@ -49,6 +63,7 @@ USART_DmxConfig dmx_config[] = {
 static void USART_ConfigTransmit(USART_DmxConfig *dmx);
 static void USART_ConfigReceive(USART_DmxConfig *dmx);
 static void USART_StartTransmitDmx(USART_DmxConfig *dmx);
+static void USART_StartReceiveDMX(USART_DmxConfig *dmx);
 
 void USART_Init(char *portDirection) {
     // Initialize DMX Buffer
@@ -60,7 +75,7 @@ void USART_Init(char *portDirection) {
 
     for (int i = 0; i < 4; i++) {
         // 16MHz HSI16, 250kbps = 64 USARTDIV, OVER8=0
-        NVIC_SetPriority(dmx_config[i].Irq, 0);
+        NVIC_SetPriority(dmx_config[i].Irq, 1);
         NVIC_EnableIRQ(dmx_config[i].Irq);
 
         if (portDirection[i] == USART_OUTPUT) {
@@ -69,8 +84,6 @@ void USART_Init(char *portDirection) {
             USART_ConfigReceive(&dmx_config[i]);
         }
     }
-
-    // USART_StartTransmitDmx(&dmx_config[0]);
 }
 
 void USART_SetPortState(char port, char enable) {
@@ -80,6 +93,7 @@ void USART_SetPortState(char port, char enable) {
                 if (dmx_config[port].IOType == USART_OUTPUT) {
                     USART_StartTransmitDmx(&dmx_config[port]);
                 } else {
+                    USART_StartReceiveDMX(&dmx_config[port]);
                 }
             } else if (dmx_config[port].State == USART_DMX_STATE_DMX && enable == 0) {
                 dmx_config[port].State = USART_DMX_STATE_Pause;
@@ -98,16 +112,22 @@ void USART_SetBufferPage(char port, char page, char *buffer) {
     }
 }
 
+char *USART_GetDmxBuffer(char port) {
+    if (port >= 0 && port < 4) {
+        return dmx_buffer[port] + 1;
+    }
+}
+
 static void USART_ConfigTransmit(USART_DmxConfig *dmx) {
     dmx->Usart->BRR = 64;
     dmx->Usart->CR2 |= (0x02 << USART_CR2_STOP_Pos);
-    dmx->Usart->CR3 |= USART_CR3_EIE | USART_CR3_DDRE | USART_CR3_DMAT;
+    dmx->Usart->CR3 |= USART_CR3_EIE | USART_CR3_DDRE;
     dmx->Usart->CR1 |= USART_CR1_UE;
 
     dmx->DRPort->BSRR = 1 << dmx->DRPin;
     dmx->Dma->CPAR = &(dmx->Usart->TDR);
     dmx->Dma->CMAR = dmx->DmxBuffer;
-    dmx->Dma->CNDTR = 512;
+    dmx->Dma->CNDTR = 513;
     dmx->Dma->CCR = DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_TCIE | DMA_CCR_TEIE;
     dmx->DmaMux->CCR = dmx->DmaMux_TX;
 
@@ -118,14 +138,38 @@ static void USART_ConfigTransmit(USART_DmxConfig *dmx) {
 static void USART_ConfigReceive(USART_DmxConfig *dmx) {
     dmx->Usart->BRR = 64;
     dmx->Usart->CR2 |= (0x02 << USART_CR2_STOP_Pos);
+    dmx->Usart->CR3 |= USART_CR3_DDRE | USART_CR3_EIE | USART_CR3_OVRDIS;
+    dmx->Usart->CR1 |= USART_CR1_UE;
+
+    dmx->DRPort->BSRR = (1 << dmx->DRPin) << 16;
+    dmx->Dma->CPAR = &(dmx->Usart->RDR);
+    dmx->Dma->CMAR = dmx->DmxBuffer;
+    dmx->Dma->CNDTR = 512;
+    dmx->Dma->CCR = DMA_CCR_MINC | DMA_CCR_TCIE | DMA_CCR_TEIE;
+    dmx->DmaMux->CCR = dmx->DmaMux_RX;
+
+    dmx->State = USART_DMX_STATE_Pause;
+    dmx->IOType = USART_INPUT;
+}
+
+static void USART_StartReceiveDMX(USART_DmxConfig *dmx) {
+    dmx->State = USART_DMX_STATE_DMX;
+
+    dmx->Usart->CR1 |= USART_CR1_RXNEIE;
+    dmx->Usart->CR1 |= USART_CR1_RE;
+
+    dmx->Dma->CCR &= ~DMA_CCR_EN;
+    dmx->Usart->CR3 &= ~USART_CR3_DMAT;
 }
 
 static void USART_StartTransmitDmx(USART_DmxConfig *dmx) {
     if (dmx->State == USART_DMX_STATE_Pause) {
         dmx->State = USART_DMX_STATE_DMX;
 
-        dmx->Usart->ICR |= USART_ICR_TCCF;
+        dmx->Dma->CCR &= ~DMA_CCR_EN;
         dmx->Usart->CR3 &= ~USART_CR3_DMAT;
+
+        dmx->Usart->ICR |= USART_ICR_TCCF;
         dmx->Usart->CR1 |= USART_CR1_TCIE;
         dmx->Usart->CR1 &= ~USART_CR1_UE;
         dmx->Usart->BRR = 128;
@@ -137,40 +181,56 @@ static void USART_StartTransmitDmx(USART_DmxConfig *dmx) {
 }
 
 static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
-    dmx->Usart->ICR |= USART_ICR_TCCF;
+    if (dmx->State == USART_DMX_STATE_DMX) {
+        if (dmx->IOType == USART_OUTPUT) {
+            dmx->Usart->ICR |= USART_ICR_TCCF;
 
-    if (dmx->IOType == USART_OUTPUT) {
-        if (dmx->Usart->BRR != 64) {
-            // Break & MAB, send control byte
-            dmx->Usart->CR1 &= ~USART_CR1_UE;
-            dmx->Usart->BRR = 64;
-            dmx->Usart->CR1 |= USART_CR1_UE;
-            dmx->Usart->TDR = 0x00;
-            dmx->Usart->CR1 |= USART_CR1_TE;
-        } else if (dmx->State == USART_DMX_STATE_DMX) {
-            if ((dmx->Usart->CR3 & USART_CR3_DMAT) == 0) {
-                // initiate dma
+            if (dmx->Usart->BRR != 64) {
+                // Break & MAB, send control byte
+                dmx->Usart->CR1 &= ~USART_CR1_UE;
+                dmx->Usart->BRR = 64;
+                dmx->Usart->CR1 |= USART_CR1_UE;
+
                 dmx->Usart->CR3 |= USART_CR3_DMAT;
-                dmx->Dma->CNDTR = 512;
+                dmx->Dma->CNDTR = 513;
                 dmx->Dma->CMAR = dmx->DmxBuffer;
                 dmx->Dma->CCR |= DMA_CCR_EN;
                 dmx->Usart->CR1 |= USART_CR1_TE;
-            } else {
-                if (dmx->State == USART_DMX_STATE_DMX) {
-                    // Initiate next DMX Frame
-                    dmx->Dma->CCR &= ~DMA_CCR_EN;
-                    dmx->Usart->CR3 &= ~USART_CR3_DMAT;
-                    dmx->Usart->CR1 &= ~(USART_CR1_UE | USART_CR1_TCIE);
+            } else if ((dmx->Usart->CR3 & USART_CR3_DMAT) != 0) {
+                // Initiate next DMX Frame
+                dmx->Dma->CCR &= ~DMA_CCR_EN;
+                dmx->Usart->CR3 &= ~USART_CR3_DMAT;
+                dmx->Usart->CR1 &= ~(USART_CR1_UE | USART_CR1_TCIE);
 
-                    dmx->Usart->BRR = 128;
-                    dmx->Usart->CR1 |= USART_CR1_UE;
-                    dmx->Usart->ICR |= USART_ICR_TCCF;
-                    dmx->Usart->CR1 |= USART_CR1_TCIE;
-                    dmx->Usart->TDR = 0x00;
-                    dmx->Usart->CR1 |= USART_CR1_TE;
+                dmx->Usart->BRR = 128;
+                dmx->Usart->CR1 |= USART_CR1_UE;
+                dmx->Usart->ICR |= USART_ICR_TCCF;
+                dmx->Usart->CR1 |= USART_CR1_TCIE;
+                dmx->Usart->TDR = 0x00;
+                dmx->Usart->CR1 |= USART_CR1_TE;
+            }
+        } else {
+            char data = dmx->Usart->RDR;
+
+            dmx->Usart->ICR |= USART_ICR_NECF | USART_ICR_PECF;
+
+            if (dmx->Usart->ISR & USART_ISR_FE) {
+                // Break, start new reception
+                dmx->Usart->CR3 &= ~USART_CR3_DMAR;
+                dmx->Dma->CCR &= ~DMA_CCR_EN;
+                dmx->Usart->ICR |= USART_ICR_FECF;
+            } else if ((dmx->Usart->CR3 & USART_CR3_DMAR) == 0) {
+                // check for 0 byte
+                if (data == 0x00) {
+                    dmx->Usart->CR3 |= USART_CR3_DMAR;
+                    dmx->Dma->CMAR = dmx->DmxBuffer + 1;
+                    dmx->Dma->CNDTR = 512;
+                    dmx->Dma->CCR |= DMA_CCR_EN;
                 }
             }
         }
+    } else {
+        dmx->Usart->CR1 &= ~(USART_CR1_TE | USART_CR1_RE);
     }
 }
 

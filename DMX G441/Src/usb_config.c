@@ -268,30 +268,34 @@ void USB_ConfigureEndpoints() {
     // Configure all endpoints and route their reception to the functions that need them
     USB_CONFIG_EP EP1 = {
         .EP = 1,
-        .RxBufferSize = 34,
-        .TxBufferSize = 34,
+        .RxBufferSize = 33,
+        .TxBufferSize = 33,
         .RxCallback = HID_HandlePacket,
+        .TxCallback = HID_HandleTXComplete,
         .Type = USB_EP_INTERRUPT};
 
     USB_CONFIG_EP EP2 = {
         .EP = 2,
-        .RxBufferSize = 34,
-        .TxBufferSize = 34,
+        .RxBufferSize = 33,
+        .TxBufferSize = 33,
         .RxCallback = HID_HandlePacket,
+        .TxCallback = HID_HandleTXComplete,
         .Type = USB_EP_INTERRUPT};
 
     USB_CONFIG_EP EP3 = {
         .EP = 3,
-        .RxBufferSize = 34,
-        .TxBufferSize = 34,
+        .RxBufferSize = 33,
+        .TxBufferSize = 33,
         .RxCallback = HID_HandlePacket,
+        .TxCallback = HID_HandleTXComplete,
         .Type = USB_EP_INTERRUPT};
 
     USB_CONFIG_EP EP4 = {
         .EP = 4,
-        .RxBufferSize = 34,
-        .TxBufferSize = 34,
+        .RxBufferSize = 33,
+        .TxBufferSize = 33,
         .RxCallback = HID_HandlePacket,
+        .TxCallback = HID_HandleTXComplete,
         .Type = USB_EP_INTERRUPT};
 
     USB_SetEPConfig(EP1);

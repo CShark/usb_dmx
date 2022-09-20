@@ -16,6 +16,7 @@
 
 
 void HID_HandlePacket(char ep, short length);
+void HID_HandleTXComplete(char ep, short length);
 char HID_SetupPacket(USB_SETUP_PACKET *setup, char *data, short length);
 
 #endif
