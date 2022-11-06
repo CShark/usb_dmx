@@ -106,7 +106,7 @@ void USART_SetBufferPage(char port, char page, char *buffer) {
     if (port >= 0 && port < 4) {
         if (page >= 0 && page < 0x10) {
             for (int i = 0; i < 32; i++) {
-                dmx_buffer[port][page * 32 + i] = buffer[i];
+                dmx_buffer[port][page * 32 + i + 1] = buffer[i];
             }
         }
     }
@@ -119,7 +119,7 @@ char *USART_GetDmxBuffer(char port) {
 }
 
 static void USART_ConfigTransmit(USART_DmxConfig *dmx) {
-    dmx->Usart->BRR = 64;
+    dmx->Usart->BRR = 287;
     dmx->Usart->CR2 |= (0x02 << USART_CR2_STOP_Pos);
     dmx->Usart->CR3 |= USART_CR3_EIE | USART_CR3_DDRE;
     dmx->Usart->CR1 |= USART_CR1_UE;
@@ -136,7 +136,7 @@ static void USART_ConfigTransmit(USART_DmxConfig *dmx) {
 }
 
 static void USART_ConfigReceive(USART_DmxConfig *dmx) {
-    dmx->Usart->BRR = 64;
+    dmx->Usart->BRR = 287;
     dmx->Usart->CR2 |= (0x02 << USART_CR2_STOP_Pos);
     dmx->Usart->CR3 |= USART_CR3_DDRE | USART_CR3_EIE | USART_CR3_OVRDIS;
     dmx->Usart->CR1 |= USART_CR1_UE;
@@ -169,46 +169,50 @@ static void USART_StartTransmitDmx(USART_DmxConfig *dmx) {
         dmx->Dma->CCR &= ~DMA_CCR_EN;
         dmx->Usart->CR3 &= ~USART_CR3_DMAT;
 
-        dmx->Usart->ICR |= USART_ICR_TCCF;
-        dmx->Usart->CR1 |= USART_CR1_TCIE;
         dmx->Usart->CR1 &= ~USART_CR1_UE;
-        dmx->Usart->BRR = 128;
+
+        dmx->Usart->BRR = 800;
 
         dmx->Usart->CR1 |= USART_CR1_UE;
-        dmx->Usart->TDR = 0x00;
         dmx->Usart->CR1 |= USART_CR1_TE;
+        dmx->Usart->TDR = 0x00;
+        dmx->Usart->CR1 |= USART_CR1_TCIE;
     }
 }
 
 static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
     if (dmx->State == USART_DMX_STATE_DMX) {
         if (dmx->IOType == USART_OUTPUT) {
-            dmx->Usart->ICR |= USART_ICR_TCCF;
+        	dmx->Usart->CR1 &= ~USART_CR1_TCIE;
 
-            if (dmx->Usart->BRR != 64) {
-                // Break & MAB, send control byte
-                dmx->Usart->CR1 &= ~USART_CR1_UE;
-                dmx->Usart->BRR = 64;
-                dmx->Usart->CR1 |= USART_CR1_UE;
+        	if(dmx->Usart->BRR != 287) {
+        		dmx->Usart->CR1 &= ~(USART_CR1_UE | USART_CR1_TE);
+        		dmx->Usart->ICR |= USART_ICR_TCCF;
 
-                dmx->Usart->CR3 |= USART_CR3_DMAT;
-                dmx->Dma->CNDTR = 513;
-                dmx->Dma->CMAR = dmx->DmxBuffer;
-                dmx->Dma->CCR |= DMA_CCR_EN;
-                dmx->Usart->CR1 |= USART_CR1_TE;
-            } else if ((dmx->Usart->CR3 & USART_CR3_DMAT) != 0) {
-                // Initiate next DMX Frame
-                dmx->Dma->CCR &= ~DMA_CCR_EN;
-                dmx->Usart->CR3 &= ~USART_CR3_DMAT;
-                dmx->Usart->CR1 &= ~(USART_CR1_UE | USART_CR1_TCIE);
+        		dmx->Usart->BRR = 287;
 
-                dmx->Usart->BRR = 128;
-                dmx->Usart->CR1 |= USART_CR1_UE;
-                dmx->Usart->ICR |= USART_ICR_TCCF;
-                dmx->Usart->CR1 |= USART_CR1_TCIE;
-                dmx->Usart->TDR = 0x00;
-                dmx->Usart->CR1 |= USART_CR1_TE;
-            }
+        		dmx->Usart->CR1 |= USART_CR1_UE;
+        		dmx->Usart->CR3 |= USART_CR3_DMAT;
+        		dmx->Dma->CNDTR = 513;
+        		dmx->Dma->CMAR = dmx->DmxBuffer;
+        		dmx->Usart->ICR |= USART_ICR_TCCF;
+        		dmx->Dma->CCR |= DMA_CCR_EN;
+
+        		dmx->Usart->CR1 |= USART_CR1_TE;
+        		dmx->Usart->CR1 |= USART_CR1_TCIE;
+        	} else {
+        		dmx->Usart->CR3 &= ~USART_CR3_DMAT;
+        		dmx->Dma->CCR &= ~DMA_CCR_EN;
+        		dmx->Usart->CR1 &= ~(USART_CR1_UE | USART_CR1_TE);
+        		dmx->Usart->ICR |= USART_ICR_TCCF;
+
+        		dmx->Usart->BRR = 800;
+
+        		dmx->Usart->CR1 |= USART_CR1_UE;
+        		dmx->Usart->CR1 |= USART_CR1_TE;
+        		dmx->Usart->TDR = 0x00;
+        		dmx->Usart->CR1 |= USART_CR1_TCIE;
+        	}
         } else {
             char data = dmx->Usart->RDR;
 
@@ -230,7 +234,8 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
             }
         }
     } else {
-        dmx->Usart->CR1 &= ~(USART_CR1_TE | USART_CR1_RE);
+        dmx->Usart->CR1 &= ~(USART_CR1_TE | USART_CR1_RE | USART_CR1_TCIE);
+        dmx->Usart->ICR |= USART_ICR_TCCF;
     }
 }
 
