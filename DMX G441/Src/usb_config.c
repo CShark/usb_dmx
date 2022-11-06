@@ -3,6 +3,8 @@
 #include "hid_device.h"
 #include "stm32g441xx.h"
 
+#include "dmx_usart.h"
+
 // Example definition for a Virtual COM Port
 static const USB_DESCRIPTOR_DEVICE DeviceDescriptor = {
     .Length = 18,
@@ -28,7 +30,7 @@ static const USB_DESCRIPTOR_CONFIG ConfigDescriptor = {
     .ConfigurationID = 1,
     .strConfiguration = 0,
     .Attributes = (1 << 7),
-    .MaxPower = 50};
+    .MaxPower = 150};
 
 static const USB_DESCRIPTOR_INTERFACE HIDInterfaces[] = {
     {.Length = 9,
@@ -229,6 +231,20 @@ char *USB_GetConfigDescriptor(short *length) {
     return ConfigurationBuffer;
 }
 
+extern USART_DmxConfig dmx_config[];
+
+char *USB_GetPortConfig(char port){
+        if (dmx_config[port].IOType == USART_OUTPUT) {
+            return u"01";
+        } else if(dmx_config[port].IOType == USART_INPUT){
+            return u"10";
+        }else if(dmx_config[port].IOType == USART_OUTPUT | USART_INPUT) {
+            return u"11";
+        }else{
+            return u"00";
+        }
+}
+
 char *USB_GetString(char index, short lcid, short *length) {
     // Strings need to be in unicode (thus prefixed with u"...")
     // The length is double the character count + 2 — or use VSCode which will show the number of bytes on hover
@@ -245,16 +261,16 @@ char *USB_GetString(char index, short lcid, short *length) {
 
     if (index == 0xA0) {
         *length = 6;
-        return u"01";
+        return USB_GetPortConfig(0);
     } else if (index == 0xA1) {
         *length = 6;
-        return u"01";
+        return USB_GetPortConfig(1);
     } else if (index == 0xA2) {
         *length = 6;
-        return u"01";
+        return USB_GetPortConfig(2);
     } else if (index == 0xA3) {
         *length = 6;
-        return u"10";
+        return USB_GetPortConfig(3);
     }
 
     return 0;
