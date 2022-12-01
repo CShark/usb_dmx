@@ -4,25 +4,112 @@
 
 static void Clock_Init(void);
 static void GPIO_Init(void);
+static void ReadPortConfig(void);
+
+static char portConfig[] = {0, 0, 0, 0};
 
 /**
  * @brief  The application entry point.
  * @retval int
  */
 int main(void) {
-    char portConfig[] = {
-        USART_OUTPUT,
-        USART_OUTPUT,
-        USART_OUTPUT,
-        USART_INPUT
-    };
-
     Clock_Init();
     GPIO_Init();
-    USART_Init(portConfig);
-    USB_Init();
+
+    ReadPortConfig();
+
+    // USART_Init(portConfig);
+    // USB_Init();
 
     while (1) {
+    }
+}
+
+/**
+ * @brief Get the configuration for each port based on the resistors on  the back
+ * @details
+ * No resistor = Disabled
+ * GND = Output
+ * 3.3V = Input
+ */
+static void ReadPortConfig() {
+    // Turn on ADC
+    ADC1->CR &= ~ADC_CR_DEEPPWD;
+    ADC1->CR |= ADC_CR_ADVREGEN;
+    // wait 20μs
+    SysTick->LOAD = 2000;
+    SysTick->VAL = 0;
+    SysTick->CTRL = 1;
+    while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0) {
+    }
+    SysTick->CTRL = 0;
+
+    // ADC Calibration
+    ADC1->CR &= ~ADC_CR_ADEN;
+    ADC1->CR &= ~ADC_CR_ADCALDIF;
+    ADC1->CR |= ADC_CR_ADCAL;
+    while (ADC1->CR & ADC_CR_ADCAL) {
+    }
+    ADC1->CR |= ADC_CR_ADEN;
+
+    // Patch ADC Channels
+    ADC1->CFGR |= (2 << ADC_CFGR_RES_Pos);
+    ADC1->SMPR1 |= (7 << ADC_SMPR1_SMP1_Pos) | (7 << ADC_SMPR1_SMP2_Pos) | (7 << ADC_SMPR1_SMP3_Pos) | (7 << ADC_SMPR1_SMP4_Pos);
+
+    // Run ADC
+    char data[12] = {0};
+
+    for (int i = 0; i < 4; i++) {
+        ADC1->SQR1 &= ~ADC_SQR1_SQ1_Msk;
+        ADC1->SQR1 |= ((i + 1) << ADC_SQR1_SQ1_Pos);
+
+        ADC1->CR |= ADC_CR_ADSTART;
+        while (!(ADC1->ISR & ADC_ISR_EOC)) {
+        }
+
+        data[i] = ADC1->DR;
+    }
+
+    // Activate pulldowns
+    GPIOA->PUPDR |= (2 << GPIO_PUPDR_PUPD0_Pos) | (2 << GPIO_PUPDR_PUPD1_Pos) | (2 << GPIO_PUPDR_PUPD2_Pos) | (2 << GPIO_PUPDR_PUPD3_Pos);
+
+    // Redo measurements
+    for (int i = 0; i < 4; i++) {
+        ADC1->SQR1 &= ~ADC_SQR1_SQ1_Msk;
+        ADC1->SQR1 |= ((i + 1) << ADC_SQR1_SQ1_Pos);
+
+        ADC1->CR |= ADC_CR_ADSTART;
+        while (!(ADC1->ISR & ADC_ISR_EOC)) {
+        }
+
+        data[i + 4] = ADC1->DR;
+    }
+
+    // deactivate pulldowns
+    GPIOA->PUPDR &= ~0xFF;
+
+    // redo measurements
+    for (int i = 0; i < 4; i++) {
+        ADC1->SQR1 &= ~ADC_SQR1_SQ1_Msk;
+        ADC1->SQR1 |= ((i + 1) << ADC_SQR1_SQ1_Pos);
+
+        ADC1->CR |= ADC_CR_ADSTART;
+        while (!(ADC1->ISR & ADC_ISR_EOC)) {
+        }
+
+        data[i + 8] = ADC1->DR;
+    }
+
+    // detect configuration
+    for (int i = 0; i < 4; i++) {
+        if ((data[i] & 0xC0) == 0xC0 && data[i + 4] > 0 && (data[i + 8] & 0xC0) == 0xC0) {
+            portConfig[i] = USART_INPUT;
+        } else if (data[i] == 0 && data[i + 4] == 0 && data[i + 8] == 0) {
+            portConfig[i] = USART_OUTPUT;
+        } else {
+            // unconnected port, don't patch.
+            // If no resistor is present, value will float w/o pulldown
+        }
     }
 }
 
