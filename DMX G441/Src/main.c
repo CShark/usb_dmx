@@ -18,8 +18,8 @@ int main(void) {
 
     ReadPortConfig();
 
-    // USART_Init(portConfig);
-    // USB_Init();
+    USART_Init(portConfig);
+    USB_Init();
 
     while (1) {
     }
@@ -111,6 +111,9 @@ static void ReadPortConfig() {
             // If no resistor is present, value will float w/o pulldown
         }
     }
+
+    // Disable ADC
+    ADC1->CR |= ADC_CR_DEEPPWD;
 }
 
 /**
