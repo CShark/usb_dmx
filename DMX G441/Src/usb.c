@@ -365,15 +365,18 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
                             data = USB_GetString(setup->DescriptorIndex, setup->Index, &length);
                         }
 
+                        short txLength = length + 2;
+                        txLength = MIN(length, setup->Length);
+
                         USB_DESCRIPTOR_STRINGS header = {
                             .Length = length + 2,
                             .Type = 0x03};
 
-                        USB_CopyMemory(data, EP0_Buf[1] + 2, length);
+                        USB_CopyMemory(data, EP0_Buf[1] + 2, txLength - 2);
 
                         USB_CopyMemory(&header, EP0_Buf[1], 2);
 
-                        BTable->COUNT_TX = EP0_Buf[1][0];
+                        BTable->COUNT_TX = txLength;
                         USB_SetEP(&USB->EP0R, USB_EP_TX_VALID, USB_EP_TX_VALID);
                     }
                     break;
@@ -455,8 +458,8 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
                     USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
                 }
                 break;
-            case 0x11: // Set Interface
-                if (DeviceState == 2 && setup->Index < USB_NumInterfaces && setup->Value == 0x00) {
+            case 0x0B: // Set Interface
+                if (DeviceState == 2 && setup->Index < USB_NumInterfaces) {
                     BTable[0].COUNT_TX = 0;
                     USB_SetEP(&USB->EP0R, USB_EP_TX_VALID, USB_EP_TX_VALID);
                 } else {
@@ -505,7 +508,7 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
                     USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
                 }
                 break;
-            case 0x12: // Sync Frame
+            case 0x0C: // Sync Frame
                 USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
                 break;
             }
