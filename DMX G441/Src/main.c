@@ -1,12 +1,20 @@
 #include "main.h"
 #include "dmx_usart.h"
 #include "usb.h"
+#include "systimer.h"
+#include "lwip/init.h"
+#include "lwip/netif.h"
+#include "lwip/timeouts.h"
+#include "ncm_device.h"
+#include "eth/ncm_netif.h"
+#include "eth/artnet.h"
 
 static void Clock_Init(void);
 static void GPIO_Init(void);
 static void ReadPortConfig(void);
 
 static char portConfig[] = {0, 0, 0, 0};
+static struct netif ncm_if;
 
 /**
  * @brief  The application entry point.
@@ -14,14 +22,33 @@ static char portConfig[] = {0, 0, 0, 0};
  */
 int main(void) {
     Clock_Init();
+    Systick_Init();
     GPIO_Init();
 
-    ReadPortConfig();
+    //ReadPortConfig();
 
-    USART_Init(portConfig);
+    //USART_Init(portConfig);
     USB_Init();
 
+    lwip_init();
+
+    netif_add(&ncm_if, IP4_ADDR_ANY, IP4_ADDR_ANY, IP4_ADDR_ANY, NULL, ncm_netif_init, netif_input);
+    netif_set_default(&ncm_if);
+    netif_set_up(&ncm_if);
+
+    delay_ms(500);
+
+    autoip_start(&ncm_if);
+
+    ArtNet_Init(&ncm_if);
+
     while (1) {
+        ncm_netif_poll(&ncm_if);
+        sys_check_timeouts();
+
+        if(GetSystick() % 500 == 0) {
+            NCM_FlushTx();
+        }        
     }
 }
 

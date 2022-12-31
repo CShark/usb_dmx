@@ -72,6 +72,8 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup);
 /// @param txBufferSize The size of the TX-Buffer
 static void USB_PrepareTransfer(USB_TRANSFER_STATE *transfer, short *ep, char *txBuffer, short *txBufferCount, short txBufferSize);
 
+void delay_ms(unsigned int ms);
+
 void USB_Init() {
     // Initialize the NVIC
     NVIC_SetPriority(USB_LP_IRQn, 8);
@@ -85,12 +87,7 @@ void USB_Init() {
     USB->CNTR &= ~USB_CNTR_PDWN;
 
     // Wait 1μs until clock is stable
-    SysTick->LOAD = 100;
-    SysTick->VAL = 0;
-    SysTick->CTRL = 1;
-    while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0) {
-    }
-    SysTick->CTRL = 0;
+    delay_ms(1);
 
     // Enable all interrupts & the internal pullup to put 1.5K on D+ for FullSpeed USB
     USB->CNTR |= USB_CNTR_RESETM | USB_CNTR_CTRM | USB_CNTR_WKUPM | USB_CNTR_SUSPM;
@@ -286,7 +283,7 @@ static void USB_HandleControl() {
 }
 
 static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
-    if ((setup->RequestType & 0x60) != 0 || (setup->RequestType & 0x1F) != 0) {
+    if ((setup->RequestType & 0x60) != 0) {// || (setup->RequestType & 0x1F) != 0) {
         // Class and interface setup packets are redirected to the class specific implementation
         char ret = USB_HandleClassSetup(setup, ControlState.Receive.Buffer, ControlState.Receive.Length);
 
@@ -369,7 +366,7 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
                         txLength = MIN(length, setup->Length);
 
                         USB_DESCRIPTOR_STRINGS header = {
-                            .Length = length + 2,
+                            .Length = length,
                             .Type = 0x03};
 
                         USB_CopyMemory(data, EP0_Buf[1] + 2, txLength - 2);
@@ -462,6 +459,7 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
                 if (DeviceState == 2 && setup->Index < USB_NumInterfaces) {
                     BTable[0].COUNT_TX = 0;
                     USB_SetEP(&USB->EP0R, USB_EP_TX_VALID, USB_EP_TX_VALID);
+                    USB_ResetClass(setup->Index, setup->Value);
                 } else {
                     USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
                 }

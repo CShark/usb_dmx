@@ -1,18 +1,15 @@
 #include "usb_config.h"
-#include "cdc_device.h"
-#include "hid_device.h"
+#include "ncm_device.h"
 #include "stm32g441xx.h"
 
-#include "dmx_usart.h"
-
-// Example definition for a Virtual COM Port
+// Example definition for a NCM-Device
 static const USB_DESCRIPTOR_DEVICE DeviceDescriptor = {
     .Length = 18,
     .Type = 0x01,
     .USBVersion = 0x0200,
-    .DeviceClass = 0,
-    .DeviceSubClass = 0,
-    .DeviceProtocol = 0,
+    .DeviceClass = 0x02,
+    .DeviceSubClass = 0x00,
+    .DeviceProtocol = 0x00,
     .MaxPacketSize = 64,
     .VendorID = 0x16C0,
     .ProductID = 0x088B,
@@ -25,162 +22,95 @@ static const USB_DESCRIPTOR_DEVICE DeviceDescriptor = {
 static const USB_DESCRIPTOR_CONFIG ConfigDescriptor = {
     .Length = 9,
     .Type = 0x02,
-    .TotalLength = 137,
-    .Interfaces = 4,
+    .TotalLength = 86,
+    .Interfaces = 2,
     .ConfigurationID = 1,
     .strConfiguration = 0,
     .Attributes = (1 << 7),
-    .MaxPower = 150};
+    .MaxPower = 50};
 
-static const USB_DESCRIPTOR_INTERFACE HIDInterfaces[] = {
-    {.Length = 9,
-     .Type = 0x04,
-     .InterfaceID = 0,
-     .AlternateID = 0,
-     .Endpoints = 2,
-     .Class = 0x03,
-     .SubClass = 0x00,
-     .Protocol = 0x00,
-     .strInterface = 0},
+static const USB_DESCRIPTOR_INTERFACE NCMInterface = {
+    .Length = 9,
+    .Type = 0x04,
+    .InterfaceID = 0,
+    .AlternateID = 0,
+    .Endpoints = 1,
+    .Class = 0x02,
+    .SubClass = 0x0D,
+    .Protocol = 0x00,
+    .strInterface = 4};
+
+static const USB_DESC_FUNC_HEADER FuncHeader = {
+    .Length = 5,
+    .Type = CS_INTERFACE,
+    .SubType = FUNC_HEADER,
+    .CDCVersion = 0x0110};
+
+static const USB_DESC_FUNC_UNION1 FuncUnion = {
+    .Length = 5,
+    .Type = CS_INTERFACE,
+    .SubType = FUNC_UNION,
+    .ControlInterface = 0,
+    .SubInterface0 = 1};
+
+static const USB_DESC_FUNC_ECM FuncETH = {
+    .Length = 13,
+    .Type = CS_INTERFACE,
+    .SubType = FUNC_ECM,
+    .MaxSegmentSize = 256,
+    .strMacAddress = 20};
+
+static const USB_DESC_FUNC_NCM FuncNCM = {
+    .Length = 6,
+    .Type = CS_INTERFACE,
+    .SubType = FUNC_NCM,
+    .NcmVersion = 0x0100,
+    .NetworkCapabilities = 0b10000};
+
+static const USB_DESCRIPTOR_INTERFACE DataInterfaces[2] = {
+    {
+        .Length = 9,
+        .Type = 0x04,
+        .InterfaceID = 1,
+        .AlternateID = 0,
+        .Endpoints = 0,
+        .Class = 0x0A,
+        .SubClass = 0x00,
+        .Protocol = 0x01,
+        .strInterface = 0,
+    },
     {.Length = 9,
      .Type = 0x04,
      .InterfaceID = 1,
-     .AlternateID = 0,
+     .AlternateID = 1,
      .Endpoints = 2,
-     .Class = 0x03,
+     .Class = 0x0A,
      .SubClass = 0x00,
-     .Protocol = 0x00,
-     .strInterface = 0},
-    {.Length = 9,
-     .Type = 0x04,
-     .InterfaceID = 2,
-     .AlternateID = 0,
-     .Endpoints = 2,
-     .Class = 0x03,
-     .SubClass = 0x00,
-     .Protocol = 0x00,
-     .strInterface = 0},
-    {.Length = 9,
-     .Type = 0x04,
-     .InterfaceID = 3,
-     .AlternateID = 0,
-     .Endpoints = 2,
-     .Class = 0x03,
-     .SubClass = 0x00,
-     .Protocol = 0x00,
+     .Protocol = 0x01,
      .strInterface = 0}};
 
-static const USB_DESC_FUNC_HID HIDDescriptors[] = {
-    {.Length = 9,
-     .Type = 0x21,
-     .HidVersion = 0x0110,
-     .CountryCode = 0x00,
-     .Descriptors = 1,
-     .Desc0Type = 0x22,
-     .Desc0Length = 36},
-};
-
-static const USB_DESCRIPTOR_ENDPOINT HIDEndpoints[] = {
+static const USB_DESCRIPTOR_ENDPOINT Endpoints[3] = {
     {.Length = 7,
      .Type = 0x05,
      .Address = (1 << 7) | 1,
      .Attributes = 0x03,
-     .MaxPacketSize = 33,
-     .Interval = 1},
+     .MaxPacketSize = 16,
+     .Interval = 50},
     {.Length = 7,
      .Type = 0x05,
-     .Address = 1,
-     .Attributes = 0x03,
-     .MaxPacketSize = 33,
+     .Address = 2,
+     .Attributes = 0x02,
+     .MaxPacketSize = 64,
      .Interval = 1},
     {.Length = 7,
      .Type = 0x05,
      .Address = (1 << 7) | 2,
-     .Attributes = 0x03,
-     .MaxPacketSize = 33,
-     .Interval = 1},
-    {.Length = 7,
-     .Type = 0x05,
-     .Address = 2,
-     .Attributes = 0x03,
-     .MaxPacketSize = 33,
-     .Interval = 1},
-    {.Length = 7,
-     .Type = 0x05,
-     .Address = (1 << 7) | 3,
-     .Attributes = 0x03,
-     .MaxPacketSize = 33,
-     .Interval = 1},
-    {.Length = 7,
-     .Type = 0x05,
-     .Address = 3,
-     .Attributes = 0x03,
-     .MaxPacketSize = 33,
-     .Interval = 1},
-    {.Length = 7,
-     .Type = 0x05,
-     .Address = (1 << 7) | 4,
-     .Attributes = 0x03,
-     .MaxPacketSize = 33,
-     .Interval = 1},
-    {.Length = 7,
-     .Type = 0x05,
-     .Address = 4,
-     .Attributes = 0x03,
-     .MaxPacketSize = 33,
-     .Interval = 1}};
+     .Attributes = 0x02,
+     .MaxPacketSize = 64,
+     .Interval = 0}};
 
 // Buffer holding the complete descriptor (except the device one) in the correct order
-static char ConfigurationBuffer[137] = {0};
-
-static char HIDInOut[] = {
-    // Usage page
-    0b00000110,
-    0xa0, 0xFF,
-    // Usage
-    0b00001001,
-    0xa5,
-    // Collection Application
-    0b10100001,
-    0x01,
-    // Usage
-    0b00001001,
-    0xa6,
-    0b00001001,
-    0xa7,
-    // Logical Min/Max
-    0b00010101,
-    0x00,
-    0b00100101,
-    0xFF,
-    // Size & Count
-    0b01110101,
-    8,
-    0b10010101,
-    33,
-    // Input
-    0b10000010,
-    0b00100010,
-    0b00000001,
-    // Usage
-    0b00001001,
-    0xa9,
-    // Logical Min/Max
-    0b00010101,
-    0x00,
-    0b00100101,
-    0xFF,
-    // Size & Count
-    0b01110101,
-    8,
-    0b10010101,
-    33,
-    // Output
-    0b10010010,
-    0b00100010,
-    0b00000001,
-    // End Collection
-    0b11000000};
+static char ConfigurationBuffer[86] = {0};
 
 /// @brief A Helper to add a descriptor to the configuration buffer
 /// @param data The raw descriptor data
@@ -205,72 +135,40 @@ char *USB_GetConfigDescriptor(short *length) {
     if (ConfigurationBuffer[0] == 0) {
         short offset = 0;
         AddToDescriptor(&ConfigDescriptor, &offset);
-
-        AddToDescriptor(&HIDInterfaces[0], &offset);
-        AddToDescriptor(&HIDDescriptors[0], &offset);
-        AddToDescriptor(&HIDEndpoints[0], &offset);
-        AddToDescriptor(&HIDEndpoints[1], &offset);
-
-        AddToDescriptor(&HIDInterfaces[1], &offset);
-        AddToDescriptor(&HIDDescriptors[0], &offset);
-        AddToDescriptor(&HIDEndpoints[2], &offset);
-        AddToDescriptor(&HIDEndpoints[3], &offset);
-
-        AddToDescriptor(&HIDInterfaces[2], &offset);
-        AddToDescriptor(&HIDDescriptors[0], &offset);
-        AddToDescriptor(&HIDEndpoints[4], &offset);
-        AddToDescriptor(&HIDEndpoints[5], &offset);
-
-        AddToDescriptor(&HIDInterfaces[3], &offset);
-        AddToDescriptor(&HIDDescriptors[0], &offset);
-        AddToDescriptor(&HIDEndpoints[6], &offset);
-        AddToDescriptor(&HIDEndpoints[7], &offset);
+        AddToDescriptor(&NCMInterface, &offset);
+        AddToDescriptor(&FuncHeader, &offset);
+        AddToDescriptor(&FuncUnion, &offset);
+        AddToDescriptor(&FuncETH, &offset);
+        AddToDescriptor(&FuncNCM, &offset);
+        AddToDescriptor(&Endpoints[0], &offset);
+        AddToDescriptor(&DataInterfaces[0], &offset);
+        AddToDescriptor(&DataInterfaces[1], &offset);
+        AddToDescriptor(&Endpoints[1], &offset);
+        AddToDescriptor(&Endpoints[2], &offset);
     }
 
     *length = sizeof(ConfigurationBuffer);
     return ConfigurationBuffer;
 }
 
-extern USART_DmxConfig dmx_config[];
-
-char *USB_GetPortConfig(char port){
-        if (dmx_config[port].IOType == USART_OUTPUT) {
-            return u"01";
-        } else if(dmx_config[port].IOType == USART_INPUT){
-            return u"10";
-        }else if(dmx_config[port].IOType == USART_OUTPUT | USART_INPUT) {
-            return u"11";
-        }else{
-            return u"00";
-        }
-}
-
 char *USB_GetString(char index, short lcid, short *length) {
     // Strings need to be in unicode (thus prefixed with u"...")
     // The length is double the character count + 2 — or use VSCode which will show the number of bytes on hover
     if (index == 1) {
-        *length = 12;
-        return u"tebis";
+        *length = 20;
+        return u"Housemade";
     } else if (index == 2) {
-        *length = 8;
-        return u"DMX";
+        *length = 12;
+        return u"ArtNet-Node";
     } else if (index == 3) {
         *length = 22;
         return u"01234-6786";
-    }
-
-    if (index == 0xA0) {
-        *length = 6;
-        return USB_GetPortConfig(0);
-    } else if (index == 0xA1) {
-        *length = 6;
-        return USB_GetPortConfig(1);
-    } else if (index == 0xA2) {
-        *length = 6;
-        return USB_GetPortConfig(2);
-    } else if (index == 0xA3) {
-        *length = 6;
-        return USB_GetPortConfig(3);
+    } else if (index == 4) {
+        *length = 28;
+        return u"DMX Interface";
+    } else if (index == 20) {
+        *length = 26;
+        return u"445BBD24A371";
     }
 
     return 0;
@@ -282,52 +180,33 @@ char *USB_GetOSDescriptor(short *length) {
 
 void USB_ConfigureEndpoints() {
     // Configure all endpoints and route their reception to the functions that need them
-    USB_CONFIG_EP EP1 = {
+    USB_CONFIG_EP IntEP = {
         .EP = 1,
-        .RxBufferSize = 33,
-        .TxBufferSize = 33,
-        .RxCallback = HID_HandlePacket,
-        .TxCallback = HID_HandleTXComplete,
+        .RxBufferSize = 16,
+        .TxBufferSize = 16,
+        .TxCallback = NCM_ControlTransmit,
         .Type = USB_EP_INTERRUPT};
 
-    USB_CONFIG_EP EP2 = {
+    USB_SetEPConfig(IntEP);
+
+    USB_CONFIG_EP DataEp = {
         .EP = 2,
-        .RxBufferSize = 33,
-        .TxBufferSize = 33,
-        .RxCallback = HID_HandlePacket,
-        .TxCallback = HID_HandleTXComplete,
-        .Type = USB_EP_INTERRUPT};
+        .RxBufferSize = 64,
+        .TxBufferSize = 64,
+        .RxCallback = NCM_HandlePacket,
+        .TxCallback = NCM_BufferTransmitted,
+        .Type = USB_EP_BULK};
 
-    USB_CONFIG_EP EP3 = {
-        .EP = 3,
-        .RxBufferSize = 33,
-        .TxBufferSize = 33,
-        .RxCallback = HID_HandlePacket,
-        .TxCallback = HID_HandleTXComplete,
-        .Type = USB_EP_INTERRUPT};
-
-    USB_CONFIG_EP EP4 = {
-        .EP = 4,
-        .RxBufferSize = 33,
-        .TxBufferSize = 33,
-        .RxCallback = HID_HandlePacket,
-        .TxCallback = HID_HandleTXComplete,
-        .Type = USB_EP_INTERRUPT};
-
-    USB_SetEPConfig(EP1);
-    USB_SetEPConfig(EP2);
-    USB_SetEPConfig(EP3);
-    USB_SetEPConfig(EP4);
+    USB_SetEPConfig(DataEp);
 }
 
 char USB_HandleClassSetup(USB_SETUP_PACKET *setup, char *data, short length) {
     // Route the setup packets based on the Interface / Class Index
-    if (setup->Request == HID_CONFIG_GETDESCRIPTOR) {
-        USB_Transmit(0, HIDInOut, sizeof(HIDInOut));
-        return USB_OK;
-    } else {
-        return HID_SetupPacket(setup, data, length);
-    }
+	NCM_SetupPacket(setup, data, length);
+}
+
+void USB_ResetClass(char interface, char alternateId) {
+    NCM_Reset(interface, alternateId);
 }
 
 __weak void USB_SuspendDevice() {

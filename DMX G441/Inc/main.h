@@ -1,8 +1,7 @@
 #ifndef __MAIN_H
 #define __MAIN_H
 
-#define STM32G441xx
+#include "platform.h"
 
-#include "stm32g4xx.h"
 void HardFault_Handler();
 #endif

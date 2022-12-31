@@ -1,0 +1,4 @@
+[submodule "DMX G441/lwip"]
+	path = DMX G441/lwip
+	url = https://git.savannah.gnu.org/git/lwip.git
+	branch = STABLE-2_1_x
