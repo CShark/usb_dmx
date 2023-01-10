@@ -9,6 +9,11 @@ typedef enum {
     USART_DMX_STATE_DMX = 2
 } USART_DMX_State;
 
+typedef enum {
+    PORT_FLAG_SINGLE = 0x01,
+    PORT_FLAG_RDM = 0x02,
+} USART_Port_Flags;
+
 typedef struct {
     USART_TypeDef *Usart;
     GPIO_TypeDef *DRPort;
@@ -20,6 +25,7 @@ typedef struct {
     char DmaMux_RX;
     char DmaMux_TX;
     USART_DMX_State State;
+    USART_Port_Flags Flags;
     char IOType;
     IRQn_Type Irq;
 
@@ -30,12 +36,14 @@ typedef struct {
 } USART_DmxConfig;
 
 #define USART_OUTPUT 0x02
-#define USART_INPUT 0x04
+#define USART_INPUT 0x01
 
 void USART_Init(char *portDirection);
 
 void USART_SetPortState(char port, char enable);
-void USART_SetBufferPage(char port, char page, char *buffer);
+void USART_AlterPortFlags(char port, USART_Port_Flags mask, char value);
+void USART_SetBuffer(char port, char *buffer, short length);
+void USART_ClearBuffer(char port);
 char *USART_GetDmxBuffer(char port);
 
 void USART_BusyCheck();

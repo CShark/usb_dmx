@@ -22,10 +22,6 @@ void Systick_Init() {
     SysTick->CTRL |= 1;
 }
 
-unsigned long GetSystick() {
-    return globalTime_ms;
-}
-
 void SysTick_Handler() {
     globalTime_ms++;
 }

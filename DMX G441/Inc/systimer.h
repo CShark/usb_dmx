@@ -7,6 +7,5 @@ void Systick_Init();
 unsigned int sys_jiffies();
 unsigned int sys_now();
 void delay_ms(unsigned int ms);
-unsigned long GetSystick();
 
 #endif

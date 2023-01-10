@@ -40,15 +40,15 @@
 #define LWIP_IPV6                  0
 
 #define NO_SYS                     1
-#define LWIP_SOCKET                (NO_SYS==0)
-#define LWIP_NETCONN               (NO_SYS==0)
-#define LWIP_NETIF_API             (NO_SYS==0)
+#define LWIP_SOCKET                0
+#define LWIP_NETCONN               0
+#define LWIP_NETIF_API             0
 
-#define LWIP_IGMP                  LWIP_IPV4
-#define LWIP_ICMP                  LWIP_IPV4
+#define LWIP_IGMP                  0
+#define LWIP_ICMP                  1
 
-#define LWIP_SNMP                  LWIP_UDP
-#define MIB2_STATS                 LWIP_SNMP
+#define LWIP_SNMP                  1
+#define MIB2_STATS                 1
 #ifdef LWIP_HAVE_MBEDTLS
 #define LWIP_SNMP_V3               (LWIP_SNMP)
 #endif
@@ -58,9 +58,9 @@
 
 #define LWIP_NUM_NETIF_CLIENT_DATA (LWIP_MDNS_RESPONDER)
 
-#define LWIP_HAVE_LOOPIF           1
-#define LWIP_NETIF_LOOPBACK        1
-#define LWIP_LOOPBACK_MAX_PBUFS    10
+#define LWIP_HAVE_LOOPIF           0
+#define LWIP_NETIF_LOOPBACK        0
+#define LWIP_LOOPBACK_MAX_PBUFS    0
 
 #define TCP_LISTEN_BACKLOG         1
 
@@ -172,7 +172,7 @@ a lot of data that needs to be copied, this should be set high. */
 
 
 /* ---------- TCP options ---------- */
-#define LWIP_TCP                1
+#define LWIP_TCP                0
 #define TCP_TTL                 255
 
 #define LWIP_ALTCP              (LWIP_TCP)

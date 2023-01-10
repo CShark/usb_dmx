@@ -1,13 +1,14 @@
 #include "main.h"
+#include "config.h"
 #include "dmx_usart.h"
-#include "usb.h"
-#include "systimer.h"
+#include "eth/artnet.h"
+#include "eth/ncm_netif.h"
 #include "lwip/init.h"
 #include "lwip/netif.h"
 #include "lwip/timeouts.h"
 #include "ncm_device.h"
-#include "eth/ncm_netif.h"
-#include "eth/artnet.h"
+#include "systimer.h"
+#include "usb.h"
 
 static void Clock_Init(void);
 static void GPIO_Init(void);
@@ -21,13 +22,26 @@ static struct netif ncm_if;
  * @retval int
  */
 int main(void) {
+    // Jump to bootloader triggered
+	RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+    if (TAMP->BKP0R == 0xF0) {
+        PWR->CR1 |= PWR_CR1_DBP;
+        TAMP->BKP0R = 0x00;
+        PWR->CR1 &= ~PWR_CR1_DBP;
+        SYSCFG->MEMRMP |= 0x01;
+        void (*SysMemBootJump)(void) = (void (*)(void))(*((unsigned long *)(STM32_SYSMEM + 4)));
+        __set_MSP(*(unsigned long *)STM32_SYSMEM);
+        SysMemBootJump();
+    }
+
     Clock_Init();
     Systick_Init();
     GPIO_Init();
 
-    //ReadPortConfig();
+    ReadPortConfig();
 
-    //USART_Init(portConfig);
+    USART_Init(portConfig);
     USB_Init();
 
     lwip_init();
@@ -38,17 +52,21 @@ int main(void) {
 
     delay_ms(500);
 
-    autoip_start(&ncm_if);
-
-    ArtNet_Init(&ncm_if);
+    Config_Init(&ncm_if);
+    ArtNet_Init(&ncm_if, portConfig);
 
     while (1) {
         ncm_netif_poll(&ncm_if);
+
+        if (sys_now() % 24 == 0) {
+            ArtNet_InputTick();
+        }
+
         sys_check_timeouts();
 
-        if(GetSystick() % 500 == 0) {
+        if (sys_now() % 500 == 0) {
             NCM_FlushTx();
-        }        
+        }
     }
 }
 
@@ -63,13 +81,9 @@ static void ReadPortConfig() {
     // Turn on ADC
     ADC1->CR &= ~ADC_CR_DEEPPWD;
     ADC1->CR |= ADC_CR_ADVREGEN;
+
     // wait 20μs
-    SysTick->LOAD = 2000;
-    SysTick->VAL = 0;
-    SysTick->CTRL = 1;
-    while ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0) {
-    }
-    SysTick->CTRL = 0;
+    delay_ms(1);
 
     // ADC Calibration
     ADC1->CR &= ~ADC_CR_ADEN;
@@ -158,8 +172,16 @@ static void Clock_Init(void) {
     RCC->PLLCFGR |= RCC_PLLCFGR_PLLREN | RCC_PLLCFGR_PLLQEN;
     RCC->CR |= RCC_CR_PLLON;
 
-    // Select PLL as main clock, AHB/2 > otherwise Bus Error Hard Fault
+    // Select PLL as main clock, AHB/2, Wait and then transition into boost mode
     RCC->CFGR |= RCC_CFGR_HPRE_3 | RCC_CFGR_SW_PLL;
+    PWR->CR5 &= ~PWR_CR5_R1MODE;
+    unsigned int latency = FLASH->ACR;
+    latency &= ~0xFF;
+    latency |= 4;
+    FLASH->ACR = latency;
+    while((FLASH->ACR & FLASH_ACR_LATENCY_Msk) != 4) {
+    }
+    RCC->CFGR &= ~RCC_CFGR_HPRE_3;
 
     // Select & Enable IO Clocks (PLL > USB, ADC; PLLC (71.875) > UART)
     RCC->CCIPR = RCC_CCIPR_CLK48SEL_1 | RCC_CCIPR_ADC12SEL_1;
@@ -169,6 +191,15 @@ static void Clock_Init(void) {
 
     // Enable DMAMUX & DMA1 Clock
     RCC->AHB1ENR |= RCC_AHB1ENR_DMAMUX1EN | RCC_AHB1ENR_DMA1EN;
+
+    // Configure RTC-Clock for Backup registers, if necessary
+    RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
+    if((RCC->BDCR & RCC_BDCR_RTCEN) == 0) {
+        PWR->CR1 |= PWR_CR1_DBP;
+        RCC->BDCR |= 0x02 << RCC_BDCR_RTCSEL_Pos;
+        RCC->BDCR |= RCC_BDCR_RTCEN;
+        PWR->CR1 &= ~PWR_CR1_DBP;
+    }
 }
 
 /**

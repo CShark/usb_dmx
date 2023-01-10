@@ -29,8 +29,24 @@ void memcpy_pbuf(struct pbuf *p, const void *source, unsigned int num) {
         memcpy(q->payload, source + offset, q->len);
         offset += q->len;
 
-        if(q->len == q->tot_len) {
+        if (q->len == q->tot_len) {
             break;
+        }
+    }
+}
+
+void memclr(void *target, unsigned int len) {
+    if ((uintptr_t)target % sizeof(long) == 0 && len % sizeof(long) == 0) {
+        long *ldst = (long *)target;
+
+        for (int i = 0; i < len / sizeof(long); i++) {
+            ldst[i] = 0;
+        }
+    } else {
+        char *cdst = (char *)target;
+
+        for (int i = 0; i < len; i++) {
+            cdst[i] = 0;
         }
     }
 }

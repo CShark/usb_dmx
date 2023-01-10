@@ -14,6 +14,10 @@
 #define UI16_LITTLE_ENDIAN(x) ((x & 0xFF00) >> 8 | (x & 0x00FF) << 8)
 //#endif
 
+#define ART_NET 0
+#define ART_SUBNET 0
+#define ART_UNIVERSE 0
+
 typedef enum {
     ArtCode_OpPoll = 0x2000,
     ArtCode_OpPollReply = 0x2100,
@@ -101,7 +105,7 @@ typedef struct {
     unsigned char __filler1[4];
     unsigned char ProgIp[4];
     unsigned char ProgSubnet[4];
-    unsigned char ProgPort[2];
+    unsigned short ProgPort;
     unsigned char Status;
     unsigned char __filler2;
     unsigned char ProgGateway[4];
@@ -140,6 +144,7 @@ typedef struct {
 } ArtNet_Input;
 #pragma pack();
 
-void ArtNet_Init(struct netif *netif);
+void ArtNet_Init(struct netif *netif, char* portConfig);
+void ArtNet_InputTick();
 
 #endif
