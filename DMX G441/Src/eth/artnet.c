@@ -3,17 +3,17 @@
 #include "lwip/autoip.h"
 #include "platform.h"
 #include "config.h"
+#include "eth/global.h"
 
 static struct udp_pcb *artnet;
 static struct netif *artif;
 static short artnet_port = 6454;
-static char artnet_buffer[512 + 18];
 
 static char artnet_net = ART_NET;
 static char artnet_subnet = ART_SUBNET;
 static char artnet_universe[8] = {ART_UNIVERSE, ART_UNIVERSE + 1, ART_UNIVERSE + 2, ART_UNIVERSE + 3, ART_UNIVERSE + 4, ART_UNIVERSE + 5, ART_UNIVERSE + 6, ART_UNIVERSE + 7};
-static char artnet_shortName[18] = "ArtNet-Node";
-static char artnet_longName[64] = "Custom Art-Net Node";
+static char artnet_shortName[18];
+static char artnet_longName[64];
 static char *artnet_portConfig;
 static char artnet_inputs = 0x0F;
 
@@ -31,31 +31,25 @@ void ArtNet_Init(struct netif *netif, char *portConfig) {
     udp_bind(artnet, IP4_ADDR_ANY, artnet_port);
     udp_recv(artnet, ArtNet_Receive, NULL);
     ip_set_option(artnet, SOF_BROADCAST);
+
+    Config_GetArtNetName(artnet_shortName, artnet_longName);
 }
 
 static void ArtNet_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port) {
-    unsigned int offset = 0;
-    unsigned short length = p->tot_len;
-    struct pbuf *q;
-
-    for (q = p; q != NULL; q = q->next) {
-        memcpy(artnet_buffer + offset, q->payload, q->len);
-        offset += q->len;
-
-        if (q->len == q->tot_len) {
-            break;
-        }
+    if(pbufcpy_mem(net_buffer, p, sizeof(net_buffer)) == 0) {
+        pbuf_free(p);
+        return;
     }
-
+    
     pbuf_free(p);
 
-    ArtNet_Header *art = artnet_buffer;
+    ArtNet_Header *art = net_buffer;
     art->ProtocolVersion = UI16_LITTLE_ENDIAN(art->ProtocolVersion);
 
     if (strcmp(art->Signature, "Art-Net") == 0 && art->ProtocolVersion >= 14) {
         switch (art->OpCode) {
         case ArtCode_OpPoll: {
-            ArtNet_Poll *poll = artnet_buffer;
+            ArtNet_Poll *poll = net_buffer;
 
             if (poll->Flags & 0x20) {
                 // Targeted mode, check addresses
@@ -86,22 +80,22 @@ static void ArtNet_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, const
             }
         } break;
         case ArtCode_OpIpProg:
-            ArtNet_HandleIpProg(artnet_buffer, addr, port);
+            ArtNet_HandleIpProg(net_buffer, addr, port);
             break;
         case ArtCode_OpAddress:
-            ArtNet_HandleAddress(artnet_buffer, addr, port);
+            ArtNet_HandleAddress(net_buffer, addr, port);
             break;
         case ArtCode_OpDmx:
-            ArtNet_HandleOutput(artnet_buffer);
+            ArtNet_HandleOutput(net_buffer);
             break;
         }
     }
 }
 
 static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port) {
-    memclr(artnet_buffer, sizeof(artnet_buffer));
+    memclr(net_buffer, sizeof(net_buffer));
 
-    ArtNet_PollReply *reply = artnet_buffer;
+    ArtNet_PollReply *reply = net_buffer;
     memcpy(reply->Header.Signature, "Art-Net", 8);
     reply->Header.OpCode = ArtCode_OpPollReply;
 
@@ -150,11 +144,12 @@ static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port) {
 static void ArtNet_HandleIpProg(ArtNet_IpProg *data, const ip_addr_t *addr, u16_t port) {
     if (data->Command & 0x80) {
         if (data->Command & 0x40) {
-            // Enable DHCP
-            autoip_start(artif);
+            Config_SetMode(CONFIGIP_DHCP);
         } else if (data->Command & 0x08) {
-            Config_ResetIp();
+            Config_SetMode(CONFIGIP_Auto);
         } else {
+            Config_SetMode(CONFIGIP_Static);
+
             if (data->Command & 0x10) {
                 Config_SetGateway(data->ProgGateway);
             }
@@ -169,8 +164,10 @@ static void ArtNet_HandleIpProg(ArtNet_IpProg *data, const ip_addr_t *addr, u16_
         }
     }
 
-    memclr(artnet_buffer, sizeof(artnet_buffer));
-    ArtNet_IpProgReply *reply = artnet_buffer;
+    Config_ApplyActive();
+
+    memclr(net_buffer, sizeof(net_buffer));
+    ArtNet_IpProgReply *reply = net_buffer;
     memcpy(reply->Header.Signature, "Art-Net", 8);
     reply->Header.OpCode = ArtCode_OpIpProgReply;
     reply->Header.ProtocolVersion = UI16_LITTLE_ENDIAN(14);
@@ -206,13 +203,19 @@ static void ArtNet_HandleAddress(ArtNet_Address *data, const ip_addr_t *addr, u1
         artnet_net = data->NetSwitch;
     }
 
+    char* shortName = 0;
+    char* longName = 0;
     if (data->ShortName[0] != 0) {
         memcpy(artnet_shortName, data->ShortName, sizeof(artnet_shortName));
+        shortName = artnet_shortName;
     }
 
     if (data->LongName[0] != 0) {
         memcpy(artnet_longName, data->LongName, sizeof(artnet_longName));
+        longName = artnet_longName;
     }
+
+    Config_SetArtNetName(shortName, longName);
 
     if (data->SubSwitch == 0) {
         artnet_subnet = ART_SUBNET;
@@ -299,8 +302,8 @@ void ArtNet_InputTick() {
     for (int i = 0; i < 4; i++) {
         if (artnet_portConfig[i] & USART_INPUT && artnet_inputs & (1 << i)) {
             // Send input
-            memclr(artnet_buffer, sizeof(artnet_buffer));
-            ArtNet_Dmx *reply = artnet_buffer;
+            memclr(net_buffer, sizeof(net_buffer));
+            ArtNet_Dmx *reply = net_buffer;
             memcpy(reply->Header.Signature, "Art-Net", 8);
             reply->Header.OpCode = ArtCode_OpDmx;
             reply->Header.ProtocolVersion = UI16_LITTLE_ENDIAN(14);
@@ -314,7 +317,7 @@ void ArtNet_InputTick() {
 
             struct pbuf *p;
             p = pbuf_alloc(PBUF_TRANSPORT, sizeof(reply), PBUF_POOL);
-            memcpy_pbuf(p, reply, sizeof(reply));
+            memcpy_pbuf(p, reply, sizeof(ArtNet_Dmx));
             udp_sendto(artnet, p, IP4_ADDR_BROADCAST, artnet_port);
             pbuf_free(p);
         }

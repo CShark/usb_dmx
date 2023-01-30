@@ -4,7 +4,9 @@
         "stm32g4xx_hal.h": "c",
         "stm32g4xx.h": "c",
         "stm32g441xx.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "artnet.h": "c",
+        "flash_ee.h": "c"
     },
     "cmake.configureOnOpen": false
 }

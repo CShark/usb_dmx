@@ -19,11 +19,24 @@ typedef struct {
 } UID_TypeDef;
 #pragma pack()
 
+//#if BYTE_ORDER == LITTLE_ENDIAN
+//#define UI16_LITTLE_ENDIAN(x) (x)
+//#define UI16_BIG_ENDIAN(x) ((x & 0xFF00) >> 8 | (x & 0x00FF) << 8)
+//#elif BYTE_ORDER == BIG_ENDIAN
+#define UI16_BIG_ENDIAN(x) (x)
+#define UI16_LITTLE_ENDIAN(x) ((x & 0xFF00) >> 8 | (x & 0x00FF) << 8)
+
+#define UI32_BIG_ENDIAN(x) (x)
+#define UI32_LITTLE_ENDIAN(x) ((x & 0xFF000000) >> 24 | (x & 0x00FF0000) >> 8 | (x & 0x0000FF00) << 8 | (x & 0x000000FF) << 24)
+//#endif
+
 #define STM32_SYSMEM 0x1FFF0000
 #define UID ((UID_TypeDef *)UID_BASE)
 
 void *memcpy(void *destination, const void *source, unsigned int num);
 void memcpy_pbuf(struct pbuf *destination, const void *source, unsigned int num);
+char pbufcpy_mem(void *target, const struct pbuf *p, unsigned int maxlen);
 void memclr(void *target, unsigned int len);
+int memcmp(const void *a, const void *b, unsigned int num);
 
 #endif

@@ -3,6 +3,7 @@
 #include "dmx_usart.h"
 #include "eth/artnet.h"
 #include "eth/ncm_netif.h"
+#include "eth/dhcp_server.h"
 #include "lwip/init.h"
 #include "lwip/netif.h"
 #include "lwip/timeouts.h"
@@ -23,7 +24,7 @@ static struct netif ncm_if;
  */
 int main(void) {
     // Jump to bootloader triggered
-	RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
+    RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
     if (TAMP->BKP0R == 0xF0) {
         PWR->CR1 |= PWR_CR1_DBP;
@@ -52,6 +53,7 @@ int main(void) {
 
     delay_ms(500);
 
+    DhcpServer_Init();
     Config_Init(&ncm_if);
     ArtNet_Init(&ncm_if, portConfig);
 
@@ -59,12 +61,12 @@ int main(void) {
         ncm_netif_poll(&ncm_if);
 
         if (sys_now() % 24 == 0) {
-            ArtNet_InputTick();
+            //ArtNet_InputTick();
         }
 
         sys_check_timeouts();
 
-        if (sys_now() % 500 == 0) {
+        if (sys_now() % 50 == 0) {
             NCM_FlushTx();
         }
     }
@@ -174,14 +176,15 @@ static void Clock_Init(void) {
 
     // Select PLL as main clock, AHB/2, Wait and then transition into boost mode
     RCC->CFGR |= RCC_CFGR_HPRE_3 | RCC_CFGR_SW_PLL;
-    PWR->CR5 &= ~PWR_CR5_R1MODE;
-    unsigned int latency = FLASH->ACR;
-    latency &= ~0xFF;
-    latency |= 4;
-    FLASH->ACR = latency;
-    while((FLASH->ACR & FLASH_ACR_LATENCY_Msk) != 4) {
-    }
-    RCC->CFGR &= ~RCC_CFGR_HPRE_3;
+    // Cannot proceed into higher speeds because the bus will fault at some point.
+    // PWR->CR5 &= ~PWR_CR5_R1MODE;
+    // unsigned int latency = FLASH->ACR;
+    // latency &= ~0xFF;
+    // latency |= 4;
+    // FLASH->ACR = latency;
+    // while ((FLASH->ACR & FLASH_ACR_LATENCY_Msk) != 4) {
+    // }
+    // RCC->CFGR &= ~RCC_CFGR_HPRE_3;
 
     // Select & Enable IO Clocks (PLL > USB, ADC; PLLC (71.875) > UART)
     RCC->CCIPR = RCC_CCIPR_CLK48SEL_1 | RCC_CCIPR_ADC12SEL_1;
@@ -194,7 +197,7 @@ static void Clock_Init(void) {
 
     // Configure RTC-Clock for Backup registers, if necessary
     RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
-    if((RCC->BDCR & RCC_BDCR_RTCEN) == 0) {
+    if ((RCC->BDCR & RCC_BDCR_RTCEN) == 0) {
         PWR->CR1 |= PWR_CR1_DBP;
         RCC->BDCR |= 0x02 << RCC_BDCR_RTCSEL_Pos;
         RCC->BDCR |= RCC_BDCR_RTCEN;

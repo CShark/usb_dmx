@@ -6,14 +6,6 @@
 #include "lwip/ip_addr.h"
 #include "arch/cc.h"
 
-//#if BYTE_ORDER == LITTLE_ENDIAN
-//#define UI16_LITTLE_ENDIAN(x) (x)
-//#define UI16_BIG_ENDIAN(x) ((x & 0xFF00) >> 8 | (x & 0x00FF) << 8)
-//#elif BYTE_ORDER == BIG_ENDIAN
-#define UI16_BIG_ENDIAN(x) (x)
-#define UI16_LITTLE_ENDIAN(x) ((x & 0xFF00) >> 8 | (x & 0x00FF) << 8)
-//#endif
-
 #define ART_NET 0
 #define ART_SUBNET 0
 #define ART_UNIVERSE 0
