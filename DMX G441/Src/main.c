@@ -62,13 +62,10 @@ int main(void) {
 
         if (sys_now() % 24 == 0) {
             //ArtNet_InputTick();
+            NCM_FlushTx();
         }
 
         sys_check_timeouts();
-
-        if (sys_now() % 50 == 0) {
-            NCM_FlushTx();
-        }
     }
 }
 

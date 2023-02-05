@@ -110,9 +110,12 @@ void EE_WriteConfig(CONFIG *config) {
         EE_UnlockFlash();
         if (free < changes) {
             EE_ClearPage();
+            active = Config_GetDefault();
+        } 
 
-            FLASH->CR |= FLASH_CR_PG;
-            for (int i = 0; i < sizeof(CONFIG) / sizeof(int); i++) {
+        FLASH->CR |= FLASH_CR_PG;
+        for (int i = 0; i < sizeof(CONFIG) / sizeof(int); i++) {
+            if (srcPtr[i] != origPtr[i]) {
                 FlashPage[currentOffset] = i;
                 FlashPage[currentOffset + 1] = srcPtr[i];
                 currentOffset += 2;
@@ -121,22 +124,9 @@ void EE_WriteConfig(CONFIG *config) {
                 }
                 FLASH->SR &= ~FLASH_SR_EOP;
             }
-            FLASH->CR &= ~FLASH_CR_PG;
-        } else {
-            FLASH->CR |= FLASH_CR_PG;
-            for (int i = 0; i < sizeof(CONFIG) / sizeof(int); i++) {
-                if (srcPtr[i] != origPtr[i]) {
-                    FlashPage[currentOffset] = i;
-                    FlashPage[currentOffset + 1] = srcPtr[i];
-                    currentOffset += 2;
-
-                    while (FLASH->SR & FLASH_SR_BSY) {
-                    }
-                    FLASH->SR &= ~FLASH_SR_EOP;
-                }
-            }
-            FLASH->CR &= ~FLASH_CR_PG;
         }
+        FLASH->CR &= ~FLASH_CR_PG;
+
         EE_LockFlash();
     }
 }

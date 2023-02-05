@@ -3,6 +3,10 @@
 
 #include "lwip/netif.h"
 
+#define ARTNET_NET 0
+#define ARTNET_SUB 0
+#define ARTNET_UNI 0
+
 #pragma pack(4) // 4 Byte alignment for flash storage
 typedef enum {
     CONFIGIP_Auto = 0,
@@ -24,6 +28,9 @@ typedef struct {
 
     char ArtNetShortName[18];
     char ArtNetLongName[64];
+    char ArtNetNetwork;
+    char ArtNetSubnet;
+    char ArtNetUniverse[8];
 } CONFIG;
 #pragma pack()
 
@@ -38,10 +45,9 @@ void Config_SetIp(const char *ip);
 void Config_SetGateway(const char *gw);
 void Config_SetNetmask(const char *net);
 
-void Config_SetArtNetName(char *shortName, char *longName);
-void Config_GetArtNetName(char *shortName, char *longName);
-
-void Config_ApplyActive();
+CONFIG* Config_GetActive();
+void Config_ApplyNetwork();
+void Config_Store();
 
 CONFIG Config_GetDefault();
 

@@ -6,10 +6,6 @@
 #include "lwip/ip_addr.h"
 #include "arch/cc.h"
 
-#define ART_NET 0
-#define ART_SUBNET 0
-#define ART_UNIVERSE 0
-
 typedef enum {
     ArtCode_OpPoll = 0x2000,
     ArtCode_OpPollReply = 0x2100,

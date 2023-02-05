@@ -12,7 +12,7 @@ char CDC_SetupPacket(USB_SETUP_PACKET *setup, char *data, short length) {
     // Windows requires us to remember the line coding
     switch (setup->Request) {
     case CDC_CONFIG_CONTROLLINESTATE:
-        if (setup->Value & 0x01) {
+        if (setup->Value & 0x01) { //DTR
             CDC_SendID();
         }
         break;
@@ -36,7 +36,7 @@ void CDC_HandlePacket(char ep, short length) {
     case 0xA0:
         if (length == 2) {
             Config_SetMode(buffer[1]);
-            Config_ApplyActive();
+            Config_ApplyNetwork();
         }
         break;
     case 0xA1:
@@ -47,7 +47,7 @@ void CDC_HandlePacket(char ep, short length) {
             IP4_ADDR(&subnet, buffer[10], buffer[11], buffer[12], buffer[13]);
 
             Config_DhcpServer(buffer[1], self, client, subnet);
-            Config_ApplyActive();
+            Config_ApplyNetwork();
         }
         break;
     case 0xA2:
@@ -56,7 +56,7 @@ void CDC_HandlePacket(char ep, short length) {
             Config_SetGateway(&buffer[5]);
             Config_SetNetmask(&buffer[9]);
 
-            Config_ApplyActive();
+            Config_ApplyNetwork();
         }
         break;
     case 0xF0:
@@ -68,7 +68,7 @@ void CDC_HandlePacket(char ep, short length) {
         break;
     case 0xF2:
         Config_Reset();
-        Config_ApplyActive();
+        Config_ApplyNetwork();
         break;
     }
 }

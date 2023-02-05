@@ -14,7 +14,11 @@ void Config_Init(struct netif *net) {
 
     Config_Reset();
     EE_ReadConfig(&activeConfig);
-    Config_ApplyActive();
+    Config_ApplyNetwork();
+}
+
+CONFIG *Config_GetActive() {
+    return &activeConfig;
 }
 
 void Config_Reset() {
@@ -48,7 +52,7 @@ void Config_SetNetmask(const char *net) {
     IP4_ADDR(&activeConfig.StaticSubnet, net[0], net[1], net[2], net[3]);
 }
 
-void Config_ApplyActive() {
+void Config_ApplyNetwork() {
     dhcp_stop(netif);
     autoip_stop(netif);
 
@@ -78,29 +82,11 @@ void Config_ApplyActive() {
         break;
     }
 
-    EE_WriteConfig(&activeConfig);
+    Config_Store();
 }
 
-void Config_SetArtNetName(char *shortName, char *longName) {
-    if (shortName != 0) {
-        memcpy(&activeConfig.ArtNetShortName, shortName, 18);
-    }
-
-    if (longName != 0) {
-        memcpy(&activeConfig.ArtNetLongName, longName, 64);
-    }
-
+void Config_Store() {
     EE_WriteConfig(&activeConfig);
-}
-
-void Config_GetArtNetName(char *shortName, char *longName) {
-    if (shortName != 0) {
-        memcpy(shortName, &activeConfig.ArtNetShortName, 18);
-    }
-
-    if (longName != 0) {
-        memcpy(longName, &activeConfig.ArtNetLongName, 64);
-    }
 }
 
 CONFIG Config_GetDefault() {
@@ -117,6 +103,14 @@ CONFIG Config_GetDefault() {
 
     memcpy(&cfg.ArtNetShortName, "ArtNet-Node", 12);
     memcpy(&cfg.ArtNetLongName, "Custom Art-Net Node", 20);
+
+    cfg.ArtNetNetwork = ARTNET_NET;
+    cfg.ArtNetSubnet = ARTNET_SUB;
+
+    for (int i = 0; i < 4; i++) {
+        cfg.ArtNetUniverse[i] = ARTNET_UNI + i;
+        cfg.ArtNetUniverse[i + 4] = ARTNET_UNI + i;
+    }
 
     return cfg;
 }
