@@ -5,14 +5,15 @@ Category2 Device (128KB, no dual bank)
 Virt-Addr | Value
 */
 #define PAGE_SIZE 2048
-#define PAGE_NUM 63
-#define PAGE_OFFSET PAGE_NUM *PAGE_SIZE
+#define PAGE_NUM 62
 #define FLASH_OFFSET 0x08000000
 
-static unsigned int *FlashPage = FLASH_OFFSET + PAGE_OFFSET;
+static volatile unsigned int *FlashConfigPage = FLASH_OFFSET + (PAGE_NUM * PAGE_SIZE);
+static volatile unsigned int *FlashFailoverPage = FLASH_OFFSET + ((PAGE_NUM + 1) * PAGE_SIZE);
 static unsigned int currentOffset = -1;
 
-static void EE_ClearPage();
+static void EE_ClearConfigPage();
+static void EE_ClearFailoverPage();
 static void EE_UnlockFlash();
 static void EE_LockFlash();
 static void EE_BeginWrite();
@@ -33,7 +34,7 @@ static void EE_LockFlash() {
     FLASH->CR |= FLASH_CR_LOCK;
 }
 
-static void EE_ClearPage() {
+static void EE_ClearConfigPage() {
     while (FLASH->SR & FLASH_SR_BSY) {
     }
 
@@ -55,8 +56,8 @@ static void EE_ClearPage() {
     }
 
     FLASH->CR |= FLASH_CR_PG;
-    FlashPage[0] = 0xA0A0A0A0;
-    FlashPage[1] = 0x0123ABCD;
+    FlashConfigPage[0] = 0xA0A0A0A0;
+    FlashConfigPage[1] = 0x0123ABCD;
 
     while (FLASH->SR & FLASH_SR_BSY) {
     }
@@ -67,18 +68,36 @@ static void EE_ClearPage() {
     currentOffset = 2;
 }
 
+static void EE_ClearFailoverPage() {
+    while (FLASH->SR & FLASH_SR_BSY) {
+    }
+
+    FLASH->SR = FLASH_SR_PGSERR;
+    FLASH->CR |= FLASH_CR_PER;
+    FLASH->CR &= ~FLASH_CR_PNB_Msk;
+    FLASH->CR |= ((PAGE_NUM + 1) << FLASH_CR_PNB_Pos);
+
+    FLASH->CR |= FLASH_CR_STRT;
+
+    while (FLASH->SR & FLASH_SR_BSY) {
+    }
+
+    FLASH->CR &= ~FLASH_CR_PER;
+}
+
 void EE_ReadConfig(CONFIG *ptr) {
     // Check Header
-    if (FlashPage[0] != 0xA0A0A0A0 || FlashPage[1] != 0x0123ABCD) {
+    if (FlashConfigPage[0] != 0xA0A0A0A0 || FlashConfigPage[1] != 0x0123ABCD) {
         // return default, format page
         EE_UnlockFlash();
-        EE_ClearPage();
+        EE_ClearConfigPage();
+        EE_ClearFailoverPage();
         EE_LockFlash();
     } else {
         // Get active config
         for (currentOffset = 2; currentOffset < PAGE_SIZE / sizeof(int); currentOffset += 2) {
-            unsigned int addr = FlashPage[currentOffset];
-            unsigned int val = FlashPage[currentOffset + 1];
+            unsigned int addr = FlashConfigPage[currentOffset];
+            unsigned int val = FlashConfigPage[currentOffset + 1];
 
             if (addr == 0xFFFFFFFF) {
                 return;
@@ -109,15 +128,15 @@ void EE_WriteConfig(CONFIG *config) {
     if (changes > 0) {
         EE_UnlockFlash();
         if (free < changes) {
-            EE_ClearPage();
+            EE_ClearConfigPage();
             active = Config_GetDefault();
-        } 
+        }
 
         FLASH->CR |= FLASH_CR_PG;
         for (int i = 0; i < sizeof(CONFIG) / sizeof(int); i++) {
             if (srcPtr[i] != origPtr[i]) {
-                FlashPage[currentOffset] = i;
-                FlashPage[currentOffset + 1] = srcPtr[i];
+                FlashConfigPage[currentOffset] = i;
+                FlashConfigPage[currentOffset + 1] = srcPtr[i];
                 currentOffset += 2;
 
                 while (FLASH->SR & FLASH_SR_BSY) {
@@ -129,4 +148,34 @@ void EE_WriteConfig(CONFIG *config) {
 
         EE_LockFlash();
     }
+}
+
+void EE_ReadFailover(char *buffer, int idx) {
+    if (idx >= 0 && idx < 4) {
+        memcpy(buffer, ((char *)FlashFailoverPage) + idx * 512, 512);
+    }
+}
+
+void EE_WriteFailover(char **buffers) {
+    EE_UnlockFlash();
+    EE_ClearFailoverPage();
+
+    FLASH->CR |= FLASH_CR_PG;
+
+    for (int i = 0; i < 4; i++) {
+        // change to 4 byte width
+        unsigned int *page = buffers[i];
+
+        for (int x = 0; x < 128; x += 2) {
+            FlashFailoverPage[i * 128 + x] = page[x];
+            FlashFailoverPage[i * 128 + x + 1] = page[x + 1];
+
+            while (FLASH->SR & FLASH_SR_BSY) {
+            }
+            FLASH->SR &= ~FLASH_SR_EOP;
+        }
+    }
+
+    FLASH->CR &= ~FLASH_CR_PG;
+    EE_LockFlash();
 }

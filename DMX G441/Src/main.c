@@ -42,7 +42,7 @@ int main(void) {
 
     ReadPortConfig();
 
-    USART_Init(portConfig);
+    USART_Init();
     USB_Init();
 
     lwip_init();
@@ -66,6 +66,7 @@ int main(void) {
         }
 
         sys_check_timeouts();
+        ArtNet_TimeoutTick();
     }
 }
 
@@ -200,6 +201,11 @@ static void Clock_Init(void) {
         RCC->BDCR |= RCC_BDCR_RTCEN;
         PWR->CR1 &= ~PWR_CR1_DBP;
     }
+
+    while ((RCC->CFGR & RCC_CFGR_SWS_Msk) != RCC_CFGR_SWS_PLL) {
+    }
+
+    SystemCoreClockUpdate();
 }
 
 /**

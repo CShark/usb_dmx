@@ -6,6 +6,8 @@
 #include "lwip/ip_addr.h"
 #include "arch/cc.h"
 
+#define ARTNET_FAILTIMEOUT 5000
+
 typedef enum {
     ArtCode_OpPoll = 0x2000,
     ArtCode_OpPollReply = 0x2100,
@@ -21,6 +23,13 @@ typedef enum {
     ArtCode_OpIpProg = 0xF800,
     ArtCode_OpIpProgReply = 0xF900,
 } ArtNet_OpCodes;
+
+typedef enum {
+    ArtFail_Hold = 0b00,
+    ArtFail_Zero = 0b01,
+    ArtFail_Full = 0b10,
+    ArtFail_Scene = 0b11,
+} ArtNet_Failover;
 
 #pragma pack(1);
 
@@ -134,5 +143,6 @@ typedef struct {
 
 void ArtNet_Init(struct netif *netif, char* portConfig);
 void ArtNet_InputTick();
+void ArtNet_TimeoutTick();
 
 #endif

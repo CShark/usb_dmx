@@ -38,10 +38,12 @@ typedef struct {
 #define USART_OUTPUT 0x02
 #define USART_INPUT 0x01
 
-void USART_Init(char *portDirection);
+void USART_Init();
+void USART_InitPortDirections(char *portDirection);
 
 void USART_SetPortState(char port, char enable);
 void USART_AlterPortFlags(char port, USART_Port_Flags mask, char value);
+void USART_ChangePortDirection(char port, char direction);
 void USART_SetBuffer(char port, char *buffer, short length);
 void USART_ClearBuffer(char port);
 char *USART_GetDmxBuffer(char port);

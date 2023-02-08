@@ -66,14 +66,16 @@ static void USART_ConfigReceive(USART_DmxConfig *dmx);
 static void USART_StartTransmitDmx(USART_DmxConfig *dmx);
 static void USART_StartReceiveDMX(USART_DmxConfig *dmx);
 
-void USART_Init(char *portDirection) {
+void USART_Init() {
     // Initialize DMX Buffer
     for (int i = 0; i < 4; i++) {
         for (int b = 0; b < 512; b++) {
             dmx_buffer[i][b] = 0x00;
         }
     }
+}
 
+void USART_InitPortDirections(char *portDirection) {
     for (int i = 0; i < 4; i++) {
         // 16MHz HSI16, 250kbps = 64 USARTDIV, OVER8=0
         NVIC_SetPriority(dmx_config[i].Irq, 1);
@@ -106,11 +108,38 @@ void USART_SetPortState(char port, char enable) {
 }
 
 void USART_AlterPortFlags(char port, USART_Port_Flags mask, char value) {
-    if(port >= 0 && port < 4) {
-        if(value) {
+    if (port >= 0 && port < 4) {
+        if (value) {
             dmx_config[port].Flags |= mask;
-        }else {
+        } else {
             dmx_config[port].Flags &= ~mask;
+        }
+    }
+}
+
+void USART_ChangePortDirection(char port, char direction) {
+    if (port >= 0 && port < 4) {
+        if (direction == USART_INPUT || direction == USART_OUTPUT) {
+            if (dmx_config[port].IOType != direction) {
+                dmx_config[port].State = USART_DMX_STATE_Pause;
+
+                // Disable USART & DMA
+                dmx_config[port].Dma->CCR &= ~DMA_CCR_EN;
+                dmx_config[port].Usart->CR1 &= ~(USART_CR1_RE | USART_CR1_TE);
+                dmx_config[port].Usart->CR1 &= ~USART_CR1_UE;
+
+                // Clear buffer
+                memclr(dmx_buffer[port], 513);
+
+                // Change direction
+                if(direction == USART_INPUT) {
+                    USART_ConfigReceive(&dmx_config[port]);
+                    USART_StartReceiveDMX(&dmx_config[port]);
+                }else{
+                    USART_ConfigTransmit(&dmx_config[port]);
+                    USART_StartTransmitDmx(&dmx_config[port]);
+                }
+            }
         }
     }
 }
@@ -130,7 +159,7 @@ void USART_SetBuffer(char port, char *buffer, short length) {
 }
 
 void USART_ClearBuffer(char port) {
-    if(port >= 0 && port < 4) {
+    if (port >= 0 && port < 4) {
         memclr(&dmx_buffer[port], 513);
     }
 }
@@ -236,6 +265,8 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
                     dmx->Usart->CR1 |= USART_CR1_TE;
                     dmx->Usart->TDR = 0x00;
                     dmx->Usart->CR1 |= USART_CR1_TCIE;
+                } else {
+                    dmx->State = USART_DMX_STATE_Pause;
                 }
             }
         } else {

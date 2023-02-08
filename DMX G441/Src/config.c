@@ -89,6 +89,13 @@ void Config_Store() {
     EE_WriteConfig(&activeConfig);
 }
 
+void Config_StoreFailsafeScene(char **buffer) {
+    EE_WriteFailover(buffer);
+}
+void Config_LoadFailsafeScene(char *target, int index) {
+    EE_ReadFailover(target, index);
+}
+
 CONFIG Config_GetDefault() {
     CONFIG cfg = {.Mode = CONFIGIP_DHCP,
                   .DhcpServerEnable = 1};
@@ -110,7 +117,14 @@ CONFIG Config_GetDefault() {
     for (int i = 0; i < 4; i++) {
         cfg.ArtNetUniverse[i] = ARTNET_UNI + i;
         cfg.ArtNetUniverse[i + 4] = ARTNET_UNI + i;
+
+        cfg.ArtNetPortFlags[i] = 0;
     }
+
+    cfg.ArtNetFailoverMode = ArtFail_Hold;
+    cfg.ArtNetPortDirection = 0x00;
+
+    cfg.AcnPriority = 100;
 
     return cfg;
 }

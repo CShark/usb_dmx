@@ -1,6 +1,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#include "eth/artnet.h"
 #include "lwip/netif.h"
 
 #define ARTNET_NET 0
@@ -31,6 +32,12 @@ typedef struct {
     char ArtNetNetwork;
     char ArtNetSubnet;
     char ArtNetUniverse[8];
+    char ArtNetPortFlags[4];
+
+    ArtNet_Failover ArtNetFailoverMode;
+    char ArtNetPortDirection; // 00 | 00 | 00 | 00 -> First bit = enable override, Second = Input (1) or Output (0)
+
+    char AcnPriority;
 } CONFIG;
 #pragma pack()
 
@@ -45,9 +52,12 @@ void Config_SetIp(const char *ip);
 void Config_SetGateway(const char *gw);
 void Config_SetNetmask(const char *net);
 
-CONFIG* Config_GetActive();
+CONFIG *Config_GetActive();
 void Config_ApplyNetwork();
 void Config_Store();
+
+void Config_StoreFailsafeScene(char **buffer);
+void Config_LoadFailsafeScene(char* target, int index);
 
 CONFIG Config_GetDefault();
 
