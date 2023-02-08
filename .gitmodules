@@ -2,3 +2,7 @@
 	path = DMX G441/lwip
 	url = https://git.savannah.gnu.org/git/lwip.git
 	branch = STABLE-2_1_x
+[submodule "ArtNET.Config"]
+	path = ArtNET.Config
+	url = git@github.com:CShark/ArtNET.Config.git
+	branch = master

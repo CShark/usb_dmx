@@ -1,5 +1,5 @@
-# USB DMX Interface
-This project is a usb dmx interface with four ports, based on the STM32G441. It will register itself as an FX5-Clone as to be recognized by most software. It will register four HID-Devices, one for each port.
+# USB ArtNET Interface
+This project is a usb ArtNET interface with four ports, based on the STM32G441. It will register itself as an Ethernet Card as to be recognized by most software. It will then bind the ArtNET-implementation to a configurable IP on that virtual ethernet card.
 
 ![](https://github.com/CShark/usb_dmx/raw/master/Images/project.jpg)
 
@@ -14,6 +14,8 @@ The PCB is designed as a four layer board, as with this small size the price was
 ![](https://github.com/CShark/usb_dmx/raw/master/Images/render_2.jpg)
 
 ## Firmware
-The firmware is completely custom, only based on CMSIS (no HAL) and aims to be compatible with the FX5-Device, which is no longer in production. In theory, the ports can be configured using the resistors at the backside of the pcb but I did not program the logic for it, so currently the first three are Outputs and the fourth is an Input. The configuration can easily be changed at the beginning of main.
+The firmware is completely custom, only based on CMSIS (no HAL) and supports the important parts of the ArtNET protocol. The initial port configuration can be set using resistors, but later be overwritten using the Command parameter of the ArtAddress-packet. The device also registers an emergency serial port, for when you misconfigure the ethernet addresses and loose connection to the device. It allows you to change the address and config on the fly and also to switch into the bootloader. The configuration can be done by the included tool that mainly uses regular ArtNET-packets for configuration but also supports the emergency serial commands if it finds a serial port for the device.
 
-To adjust the name of the interface, look at `USB_GetString` in the `usb_config.c`.
+By default the device will spin up a DHCP server that supports two clients in the 10.0.0.0 network.
+
+To adjust the hardcoded name of the ethernet card in the device manager, look at `USB_GetString` in the `usb_config.c`.
