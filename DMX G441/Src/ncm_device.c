@@ -295,6 +295,9 @@ static void NCM_TransmitNextBuffer() {
     if (tx->status == NCM_BUF_READY) {
         tx->status = NCM_BUF_LOCKED;
 
+        while(USB_IsTransmitPending(2)) {            
+        }
+
         USB_Transmit(2, tx->buffer, tx->length);
     }
 }

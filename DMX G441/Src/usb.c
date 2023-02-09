@@ -9,6 +9,10 @@
 #define __USB2MEM(X) (((int)X + __USBBUF_BEGIN))
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
+#ifdef USB_TXTIMEOUT
+extern unsigned int sys_now();
+#endif
+
 typedef struct {
     unsigned short ADDR_TX;
     unsigned short COUNT_TX;
@@ -19,6 +23,9 @@ typedef struct {
 typedef struct {
     unsigned short Length;
     unsigned short BytesSent;
+#ifdef USB_TXTIMEOUT
+    unsigned int Timeout;
+#endif
     unsigned char *Buffer;
 } USB_TRANSFER_STATE;
 
@@ -118,7 +125,7 @@ void USB_HP_IRQHandler() {
                 if (Transfers[ep - 1].Length > 0) {
                     if (Transfers[ep - 1].Length > Transfers[ep - 1].BytesSent) {
                         USB_PrepareTransfer(&Transfers[ep - 1], &USB->EP0R + ep * 2, Buffers[ep * 2 + 1].Buffer, &BTable[ep].COUNT_TX, Buffers[ep * 2 + 1].Size);
-                    } else if (Transfers[ep - 1].Length == Transfers[ep - 1].BytesSent) {
+                    } else {
                         char length = Transfers[ep - 1].Length;
                         Transfers[ep - 1].Length = 0;
 
@@ -276,6 +283,8 @@ static void USB_HandleControl() {
         if (ControlState.Transfer.Length > 0) {
             if (ControlState.Transfer.Length > ControlState.Transfer.BytesSent) {
                 USB_PrepareTransfer(&ControlState.Transfer, &USB->EP0R, &EP0_Buf[1], &BTable[0].COUNT_TX, 64);
+            } else {
+                ControlState.Transfer.Length = 0;
             }
         }
 
@@ -284,7 +293,7 @@ static void USB_HandleControl() {
 }
 
 static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
-    if ((setup->RequestType & 0x60) != 0) {// || (setup->RequestType & 0x1F) != 0) {
+    if ((setup->RequestType & 0x60) != 0) { // || (setup->RequestType & 0x1F) != 0) {
         // Class and interface setup packets are redirected to the class specific implementation
         char ret = USB_HandleClassSetup(setup, ControlState.Receive.Buffer, ControlState.Receive.Length);
 
@@ -521,6 +530,10 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
 static void USB_PrepareTransfer(USB_TRANSFER_STATE *transfer, short *ep, char *txBuffer, short *txBufferCount, short txBufferSize) {
     // Check if there is still data to transmit and if so transmit the next chunk of data
     *txBufferCount = MIN(txBufferSize, transfer->Length - transfer->BytesSent);
+#ifdef USB_TXTIMEOUT
+    transfer->Timeout = sys_now();
+#endif
+
     if (*txBufferCount > 0) {
         USB_CopyMemory(transfer->Buffer + transfer->BytesSent, txBuffer, *txBufferCount);
         transfer->BytesSent += *txBufferCount;
@@ -546,11 +559,20 @@ void USB_Transmit(char ep, char *buffer, short length) {
 }
 
 char USB_IsTransmitPending(char ep) {
+    USB_TRANSFER_STATE* tx;
     if (ep == 0) {
-        return ControlState.Transfer.Length > 0;
+        tx = &ControlState.Transfer;
     } else {
-        return Transfers[ep - 1].Length > 0;
+        tx = &Transfers[ep - 1];
     }
+
+#ifdef USB_TXTIMEOUT
+    if(sys_now() - tx->Timeout > USB_TXTIMEOUT) {
+        tx->Length = 0;
+    }
+#endif
+
+    return tx->Length > 0;
 }
 
 void USB_Fetch(char ep, char *buffer, short *length) {

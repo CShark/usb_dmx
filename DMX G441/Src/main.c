@@ -60,7 +60,7 @@ int main(void) {
         ncm_netif_poll(&ncm_if);
 
         if (sys_now() % 24 == 0) {
-            //ArtNet_InputTick();
+            ArtNet_InputTick();
             NCM_FlushTx();
         }
 

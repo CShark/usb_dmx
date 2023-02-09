@@ -424,7 +424,7 @@ void ArtNet_InputTick() {
             memcpy(reply->Data, buffer, 512);
 
             struct pbuf *p;
-            p = pbuf_alloc(PBUF_TRANSPORT, sizeof(reply), PBUF_POOL);
+            p = pbuf_alloc(PBUF_TRANSPORT, sizeof(ArtNet_Dmx), PBUF_POOL);
             memcpy_pbuf(p, reply, sizeof(ArtNet_Dmx));
             udp_sendto(artnet, p, IP4_ADDR_BROADCAST, artnet_port);
             pbuf_free(p);

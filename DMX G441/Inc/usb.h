@@ -28,6 +28,9 @@ typedef struct {
 #define USB_BUSY 1
 #define USB_ERR 2
 
+// Disable this define to disable the timeout feature
+#define USB_TXTIMEOUT 50
+
 /// @brief Initialize all USB related stuff
 void USB_Init();
 /// @brief Low Priority handler for most interrupts
