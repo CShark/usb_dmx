@@ -1,4 +1,5 @@
 #include "usb.h"
+#include "profiling.h"
 #include "stm32g441xx.h"
 #include "usb_config.h"
 
@@ -376,6 +377,9 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
                         BTable->COUNT_TX = txLength;
                         USB_SetEP(&USB->EP0R, USB_EP_TX_VALID, USB_EP_TX_VALID);
                     }
+                    break;
+                case 0x06: // Device Qualifier Descriptor
+                    USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
                     break;
                 }
                 break;

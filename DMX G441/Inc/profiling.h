@@ -9,6 +9,7 @@
 
 void PROFILING_START(const char *profile_name);
 void PROFILING_EVENT(const char *event);
+void PROFILING_EVENTARGS(const char *event, char arg1, char arg2, char arg3, char arg4);
 void PROFILING_STOP(void);
 
 #endif // _PROFILING_H

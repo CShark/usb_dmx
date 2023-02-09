@@ -13,6 +13,7 @@ static const char *prof_name;                   // profiler name
 static uint32_t time_event[MAX_EVENT_COUNT];    // events time
 static const char *event_name[MAX_EVENT_COUNT]; // events name
 static uint8_t event_count = __PROF_STOPED;     // events counter
+static char event_args[MAX_EVENT_COUNT][4];     // events arguments
 
 /* Private function prototypes ---------------------------------------*/
 /* -------------------------------------------------------------------*/
@@ -54,6 +55,26 @@ void PROFILING_EVENT(const char *event) {
 }
 
 /**
+ * @brief  Event. Save events name and time
+ *
+ * @param event Event name
+ */
+void PROFILING_EVENTARGS(const char *event, char arg1, char arg2, char arg3, char arg4) {
+    if (event_count == __PROF_STOPED)
+        return;
+
+    if (event_count < MAX_EVENT_COUNT) {
+        time_event[event_count] = DWT->CYCCNT;
+        event_name[event_count] = event;
+        event_args[event_count][0] = arg1;
+        event_args[event_count][1] = arg2;
+        event_args[event_count][2] = arg3;
+        event_args[event_count][3] = arg4;
+        event_count++;
+    }
+}
+
+/**
  * @brief Stop profiler. Print event table to ITM Stimulus Port 0
  */
 void PROFILING_STOP(void) {
@@ -78,7 +99,11 @@ void PROFILING_STOP(void) {
         timestamp = (time_event[i] - time_start) / tick_per_1us;
         delta_t = timestamp - time_prev;
         time_prev = timestamp;
-        DEBUG_PRINTF("%-30s:%9d μs | +%9d μs\r\n", event_name[i], timestamp, delta_t);
+        if (event_args[i][0] == 0 && event_args[i][1] == 0 && event_args[i][2] == 0 && event_args[i][3] == 0) {
+            DEBUG_PRINTF("%-30s:%9d μs | +%9d μs\r\n", event_name[i], timestamp, delta_t);
+        }else{
+            DEBUG_PRINTF("%-30s:%9d μs | +%9d μs | %02X %02X %02X %02X\r\n", event_name[i], timestamp, delta_t, event_args[i][0], event_args[i][1], event_args[i][2], event_args[i][3]);
+        }
     }
     DEBUG_PRINTF("\r\n");
     event_count = __PROF_STOPED;
