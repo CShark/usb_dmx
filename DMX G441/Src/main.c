@@ -10,6 +10,7 @@
 #include "ncm_device.h"
 #include "systimer.h"
 #include "usb.h"
+#include "profiling.h"
 
 static void Clock_Init(void);
 static void GPIO_Init(void);
@@ -40,18 +41,16 @@ int main(void) {
     Systick_Init();
     GPIO_Init();
 
-    ReadPortConfig();
-
-    USART_Init();
     USB_Init();
+    USART_Init();
 
     lwip_init();
-
+    
     netif_add(&ncm_if, IP4_ADDR_ANY, IP4_ADDR_ANY, IP4_ADDR_ANY, NULL, ncm_netif_init, netif_input);
     netif_set_default(&ncm_if);
     netif_set_up(&ncm_if);
 
-    delay_ms(500);
+    ReadPortConfig();
 
     DhcpServer_Init();
     Config_Init(&ncm_if);

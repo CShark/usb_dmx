@@ -10,5 +10,6 @@
 
 char CDC_SetupPacket(USB_SETUP_PACKET *setup, char* data, short length);
 void CDC_HandlePacket(char ep, short length);
+void CDC_TransmitData(char*data, int len);
 
 #endif

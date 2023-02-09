@@ -16,7 +16,7 @@ char CDC_SetupPacket(USB_SETUP_PACKET *setup, char *data, short length) {
         // Does not require the host to send any data, as that might mess with other
         // serial devices connected to the machine. Instead it will raise the RTS control flag
         // and wait for some response, which will be the same ID as send in the ArtPollReply.
-        if (setup->Value & 0x01) { //DTR
+        if (setup->Value & 0x01) { // DTR
             CDC_SendID();
         }
         break;
@@ -78,4 +78,8 @@ void CDC_HandlePacket(char ep, short length) {
 
 static void CDC_SendID() {
     USB_Transmit(4, UID->ID, sizeof(UID->ID));
+}
+
+void CDC_TransmitData(char *data, int len) {
+    USB_Transmit(4, data, len);
 }

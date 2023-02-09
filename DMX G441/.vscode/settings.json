@@ -6,7 +6,8 @@
         "stm32g441xx.h": "c",
         "string.h": "c",
         "artnet.h": "c",
-        "flash_ee.h": "c"
+        "flash_ee.h": "c",
+        "cdc_device.h": "c"
     },
     "cmake.configureOnOpen": false
 }
