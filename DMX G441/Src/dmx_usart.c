@@ -171,7 +171,7 @@ char *USART_GetDmxBuffer(char port) {
 }
 
 static void USART_ConfigTransmit(USART_DmxConfig *dmx) {
-    dmx->Usart->BRR = 287;
+    dmx->Usart->BRR = USART_BRR;
     dmx->Usart->CR2 |= (0x02 << USART_CR2_STOP_Pos);
     dmx->Usart->CR3 |= USART_CR3_EIE | USART_CR3_DDRE;
     dmx->Usart->CR1 |= USART_CR1_UE;
@@ -188,7 +188,7 @@ static void USART_ConfigTransmit(USART_DmxConfig *dmx) {
 }
 
 static void USART_ConfigReceive(USART_DmxConfig *dmx) {
-    dmx->Usart->BRR = 287;
+    dmx->Usart->BRR = USART_BRR;
     dmx->Usart->CR2 |= (0x02 << USART_CR2_STOP_Pos);
     dmx->Usart->CR3 |= USART_CR3_DDRE | USART_CR3_EIE | USART_CR3_OVRDIS;
     dmx->Usart->CR1 |= USART_CR1_UE;
@@ -223,7 +223,7 @@ static void USART_StartTransmitDmx(USART_DmxConfig *dmx) {
 
         dmx->Usart->CR1 &= ~USART_CR1_UE;
 
-        dmx->Usart->BRR = 800;
+        dmx->Usart->BRR = USART_BRRBREAK;
 
         dmx->Usart->CR1 |= USART_CR1_UE;
         dmx->Usart->CR1 |= USART_CR1_TE;
@@ -237,11 +237,11 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
         if (dmx->IOType & USART_OUTPUT) {
             dmx->Usart->CR1 &= ~USART_CR1_TCIE;
 
-            if (dmx->Usart->BRR != 287) {
+            if (dmx->Usart->BRR != USART_BRR) {
                 dmx->Usart->CR1 &= ~(USART_CR1_UE | USART_CR1_TE);
                 dmx->Usart->ICR |= USART_ICR_TCCF;
 
-                dmx->Usart->BRR = 287;
+                dmx->Usart->BRR = USART_BRR;
 
                 dmx->Usart->CR1 |= USART_CR1_UE;
                 dmx->Usart->CR3 |= USART_CR3_DMAT;
@@ -259,7 +259,7 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
                     dmx->Usart->CR1 &= ~(USART_CR1_UE | USART_CR1_TE);
                     dmx->Usart->ICR |= USART_ICR_TCCF;
 
-                    dmx->Usart->BRR = 800;
+                    dmx->Usart->BRR = USART_BRRBREAK;
 
                     dmx->Usart->CR1 |= USART_CR1_UE;
                     dmx->Usart->CR1 |= USART_CR1_TE;

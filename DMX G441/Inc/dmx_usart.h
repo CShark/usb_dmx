@@ -38,6 +38,13 @@ typedef struct {
 #define USART_OUTPUT 0x02
 #define USART_INPUT 0x01
 
+// For AHB/2
+//#define USART_BRR 287
+//#define USART_BRRBREAK 800
+
+#define USART_BRR (287 << 1)
+#define USART_BRRBREAK (800 << 1)
+
 void USART_Init();
 void USART_InitPortDirections(char *portDirection);
 

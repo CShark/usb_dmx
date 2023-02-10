@@ -2,15 +2,15 @@
 #include "config.h"
 #include "dmx_usart.h"
 #include "eth/artnet.h"
-#include "eth/ncm_netif.h"
 #include "eth/dhcp_server.h"
+#include "eth/ncm_netif.h"
 #include "lwip/init.h"
 #include "lwip/netif.h"
 #include "lwip/timeouts.h"
 #include "ncm_device.h"
+#include "profiling.h"
 #include "systimer.h"
 #include "usb.h"
-#include "profiling.h"
 
 static void Clock_Init(void);
 static void GPIO_Init(void);
@@ -45,7 +45,7 @@ int main(void) {
     USART_Init();
 
     lwip_init();
-    
+
     netif_add(&ncm_if, IP4_ADDR_ANY, IP4_ADDR_ANY, IP4_ADDR_ANY, NULL, ncm_netif_init, netif_input);
     netif_set_default(&ncm_if);
     netif_set_up(&ncm_if);
@@ -56,12 +56,15 @@ int main(void) {
     Config_Init(&ncm_if);
     ArtNet_Init(&ncm_if, portConfig);
 
+    unsigned int last_inputTick = 0;
+
     while (1) {
         ncm_netif_poll(&ncm_if);
 
-        if (sys_now() % 24 == 0) {
+        if (sys_now() - last_inputTick > 24) {
             ArtNet_InputTick();
             NCM_FlushTx();
+            last_inputTick = sys_now();
         }
 
         sys_check_timeouts();
@@ -173,15 +176,14 @@ static void Clock_Init(void) {
 
     // Select PLL as main clock, AHB/2, Wait and then transition into boost mode
     RCC->CFGR |= RCC_CFGR_HPRE_3 | RCC_CFGR_SW_PLL;
-    // Cannot proceed into higher speeds because the bus will fault at some point.
-    // PWR->CR5 &= ~PWR_CR5_R1MODE;
-    // unsigned int latency = FLASH->ACR;
-    // latency &= ~0xFF;
-    // latency |= 4;
-    // FLASH->ACR = latency;
-    // while ((FLASH->ACR & FLASH_ACR_LATENCY_Msk) != 4) {
-    // }
-    // RCC->CFGR &= ~RCC_CFGR_HPRE_3;
+    PWR->CR5 &= ~PWR_CR5_R1MODE;
+    unsigned int latency = FLASH->ACR;
+    latency &= ~0xFF;
+    latency |= 4;
+    FLASH->ACR = latency;
+    while ((FLASH->ACR & FLASH_ACR_LATENCY_Msk) != 4) {
+    }
+    RCC->CFGR &= ~RCC_CFGR_HPRE_3;
 
     // Select & Enable IO Clocks (PLL > USB, ADC; PLLC (71.875) > UART)
     RCC->CCIPR = RCC_CCIPR_CLK48SEL_1 | RCC_CCIPR_ADC12SEL_1;

@@ -5,6 +5,7 @@
 #include "lwip/autoip.h"
 #include "platform.h"
 #include "systimer.h"
+#include "profiling.h"
 
 static struct udp_pcb *artnet;
 static struct netif *artif;

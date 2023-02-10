@@ -4,6 +4,7 @@
 #include <netif/ethernet.h>
 #include <lwip/etharp.h>
 #include "platform.h"
+#include "profiling.h"
 //#include <lwip/apps/dhcp_server.h>
 
 static struct netif netif;

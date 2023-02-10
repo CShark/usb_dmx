@@ -81,5 +81,8 @@ static void CDC_SendID() {
 }
 
 void CDC_TransmitData(char *data, int len) {
+    while (USB_IsTransmitPending(4)) {
+    }
+
     USB_Transmit(4, data, len);
 }
