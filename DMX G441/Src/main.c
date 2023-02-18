@@ -57,12 +57,19 @@ int main(void) {
     ArtNet_Init(&ncm_if, portConfig);
 
     unsigned int last_inputTick = 0;
+    unsigned int last_forcedInputTick = 0;
 
     while (1) {
         ncm_netif_poll(&ncm_if);
 
         if (sys_now() - last_inputTick > 24) {
-            ArtNet_InputTick();
+            if (sys_now() - last_forcedInputTick > 1000) {
+                ArtNet_InputTick(1);
+                last_forcedInputTick = sys_now();
+            } else {
+                ArtNet_InputTick(0);
+            }
+            
             NCM_FlushTx();
             last_inputTick = sys_now();
         }

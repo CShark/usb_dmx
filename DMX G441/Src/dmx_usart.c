@@ -107,7 +107,7 @@ void USART_SetPortState(char port, char enable) {
     }
 }
 
-void USART_AlterPortFlags(char port, USART_Port_Flags mask, char value) {
+void USART_AlterPortFlags(char port, ArtNet_Port_Flags mask, char value) {
     if (port >= 0 && port < 4) {
         if (value) {
             dmx_config[port].Flags |= mask;
@@ -167,6 +167,17 @@ void USART_ClearBuffer(char port) {
 char *USART_GetDmxBuffer(char port) {
     if (port >= 0 && port < 4) {
         return dmx_buffer[port] + 1;
+    }
+}
+
+char USART_IsInputNew(char port) {
+    if(port >= 0 && port < 4) {
+        return dmx_config[port].NewInput;
+    }
+}
+void USART_ClearInputNew(char port) {
+    if(port >= 0 && port < 4) {
+        dmx_config[port].NewInput = 0;
     }
 }
 
@@ -286,6 +297,7 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
                     dmx->Dma->CMAR = dmx->DmxBuffer + 1;
                     dmx->Dma->CNDTR = 512;
                     dmx->Dma->CCR |= DMA_CCR_EN;
+                    dmx->NewInput = 1;
                 }
             }
         }

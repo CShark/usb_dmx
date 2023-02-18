@@ -62,6 +62,34 @@ void CDC_HandlePacket(char ep, short length) {
             Config_ApplyNetwork();
         }
         break;
+
+    case 0xB0:
+        CDC_TransmitData(&Config_GetActive()->Mode, 1);
+        break;
+    case 0xB1: {
+        char data[1 + 4 * 3];
+        CONFIG *config = Config_GetActive();
+        data[0] = config->DhcpServerEnable;
+        for (int i = 0; i < 4; i++) {
+            data[i + 1] = ip4_addr_get_byte(&config->DhcpServerSelf, i);
+            data[i + 5] = ip4_addr_get_byte(&config->DhcpServerClient, i);
+            data[i + 9] = ip4_addr_get_byte(&config->DhcpServerSubnet, i);
+        }
+
+        CDC_TransmitData(data, sizeof(data));
+    } break;
+    case 0xB2: {
+        char data[4 * 3];
+        CONFIG *config = Config_GetActive();
+        for (int i = 0; i < 4; i++) {
+            data[i] = ip4_addr_get_byte(&config->StaticIp, i);
+            data[i + 4] = ip4_addr_get_byte(&config->StaticGateway, i);
+            data[i + 8] = ip4_addr_get_byte(&config->StaticSubnet, i);
+        }
+
+        CDC_TransmitData(data, sizeof(data));
+    } break;
+
     case 0xF0:
         PWR->CR1 |= PWR_CR1_DBP;
         TAMP->BKP0R = 0xF0;

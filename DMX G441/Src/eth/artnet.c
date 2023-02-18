@@ -4,8 +4,8 @@
 #include "eth/global.h"
 #include "lwip/autoip.h"
 #include "platform.h"
-#include "systimer.h"
 #include "profiling.h"
+#include "systimer.h"
 
 static struct udp_pcb *artnet;
 static struct netif *artif;
@@ -13,7 +13,6 @@ static short artnet_port = 6454;
 
 static char artnet_portConfig[4];
 static char *initial_portConfig;
-static char artnet_inputs = 0x0F;
 static unsigned int artnet_timeout[4];
 
 static CONFIG *config;
@@ -151,7 +150,9 @@ static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port) {
     }
 
     for (int i = 0; i < 4; i++) {
-        reply->GoodInput[i] = (((artnet_inputs ^ 0xFF) & (1 << i)) >> i) << 3;
+        if (config->ArtNetPortFlags[i] & PORT_FLAG_INDISABLED) {
+            reply->GoodInput[i] = 1 << 3;
+        }
 
         if ((config->ArtNetPortFlags[i] & PORT_FLAG_RDM) == 0) {
             reply->GoodOutputB[i] |= (1 << 7);
@@ -347,9 +348,12 @@ static void ArtNet_HandleAddress(ArtNet_Address *data, const ip_addr_t *addr, u1
 }
 
 static void ArtNet_HandleInput(ArtNet_Input *data, const ip_addr_t *addr, u16_t port) {
-    artnet_inputs = 0;
     for (int i = 0; i < 4; i++) {
-        artnet_inputs |= ((data->Input[i] & 0x01) ^ 0x01) << i;
+        if (data->Input[i] & 0x01) {
+            config->ArtNetPortFlags[i] |= PORT_FLAG_INDISABLED;
+        } else {
+            config->ArtNetPortFlags[i] &= ~PORT_FLAG_INDISABLED;
+        }
     }
 
     ArtNet_SendPollReply(addr, port);
@@ -407,28 +411,32 @@ static void ArtNet_ApplyFailover(int idx) {
     }
 }
 
-void ArtNet_InputTick() {
+void ArtNet_InputTick(char forceTransmit) {
     for (int i = 0; i < 4; i++) {
-        if (artnet_portConfig[i] & USART_INPUT && artnet_inputs & (1 << i)) {
-            // Send input
-            memclr(net_buffer, sizeof(net_buffer));
-            ArtNet_Dmx *reply = net_buffer;
-            memcpy(reply->Header.Signature, "Art-Net", 8);
-            reply->Header.OpCode = ArtCode_OpDmx;
-            reply->Header.ProtocolVersion = UI16_LITTLE_ENDIAN(14);
+        if ((artnet_portConfig[i] & USART_INPUT) && ((config->ArtNetPortFlags[i] & PORT_FLAG_INDISABLED) == 0)) {
+            if (USART_IsInputNew(i) || forceTransmit) {
+                USART_ClearInputNew(i);
 
-            reply->Net = config->ArtNetNetwork & 0x7F;
-            reply->SubUni = ((config->ArtNetSubnet & 0x0F) << 4) | (config->ArtNetUniverse[i] & 0x0F);
-            reply->Length = 512;
+                // Send input
+                memclr(net_buffer, sizeof(net_buffer));
+                ArtNet_Dmx *reply = net_buffer;
+                memcpy(reply->Header.Signature, "Art-Net", 8);
+                reply->Header.OpCode = ArtCode_OpDmx;
+                reply->Header.ProtocolVersion = UI16_LITTLE_ENDIAN(14);
 
-            char *buffer = USART_GetDmxBuffer(i);
-            memcpy(reply->Data, buffer, 512);
+                reply->Net = config->ArtNetNetwork & 0x7F;
+                reply->SubUni = ((config->ArtNetSubnet & 0x0F) << 4) | (config->ArtNetUniverse[i] & 0x0F);
+                reply->Length = 512;
 
-            struct pbuf *p;
-            p = pbuf_alloc(PBUF_TRANSPORT, sizeof(ArtNet_Dmx), PBUF_POOL);
-            memcpy_pbuf(p, reply, sizeof(ArtNet_Dmx));
-            udp_sendto(artnet, p, IP4_ADDR_BROADCAST, artnet_port);
-            pbuf_free(p);
+                char *buffer = USART_GetDmxBuffer(i);
+                memcpy(reply->Data, buffer, 512);
+
+                struct pbuf *p;
+                p = pbuf_alloc(PBUF_TRANSPORT, sizeof(ArtNet_Dmx), PBUF_POOL);
+                memcpy_pbuf(p, reply, sizeof(ArtNet_Dmx));
+                udp_sendto(artnet, p, IP4_ADDR_BROADCAST, artnet_port);
+                pbuf_free(p);
+            }
         }
     }
 }

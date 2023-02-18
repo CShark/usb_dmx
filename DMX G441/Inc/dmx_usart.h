@@ -2,17 +2,13 @@
 #define __DMX_USART_H
 
 #include "stm32g441xx.h"
+#include "eth/artnet.h"
 
 typedef enum {
     USART_DMX_STATE_UNCONFIGURED = 0,
     USART_DMX_STATE_Pause = 1,
     USART_DMX_STATE_DMX = 2
 } USART_DMX_State;
-
-typedef enum {
-    PORT_FLAG_SINGLE = 0x01,
-    PORT_FLAG_RDM = 0x02,
-} USART_Port_Flags;
 
 typedef struct {
     USART_TypeDef *Usart;
@@ -25,7 +21,7 @@ typedef struct {
     char DmaMux_RX;
     char DmaMux_TX;
     USART_DMX_State State;
-    USART_Port_Flags Flags;
+    ArtNet_Port_Flags Flags;
     char IOType;
     IRQn_Type Irq;
 
@@ -33,6 +29,8 @@ typedef struct {
     short DRPin;
     short RxPin;
     char BreakStatus;
+
+    char NewInput;
 } USART_DmxConfig;
 
 #define USART_OUTPUT 0x02
@@ -49,11 +47,13 @@ void USART_Init();
 void USART_InitPortDirections(char *portDirection);
 
 void USART_SetPortState(char port, char enable);
-void USART_AlterPortFlags(char port, USART_Port_Flags mask, char value);
+void USART_AlterPortFlags(char port, ArtNet_Port_Flags mask, char value);
 void USART_ChangePortDirection(char port, char direction);
 void USART_SetBuffer(char port, char *buffer, short length);
 void USART_ClearBuffer(char port);
 char *USART_GetDmxBuffer(char port);
+char USART_IsInputNew(char port);
+void USART_ClearInputNew(char port);
 
 void USART_BusyCheck();
 

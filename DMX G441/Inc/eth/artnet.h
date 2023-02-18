@@ -31,6 +31,12 @@ typedef enum {
     ArtFail_Scene = 0b11,
 } ArtNet_Failover;
 
+typedef enum {
+    PORT_FLAG_SINGLE = 0x01,
+    PORT_FLAG_RDM = 0x02,
+    PORT_FLAG_INDISABLED = 0x04,
+} ArtNet_Port_Flags;
+
 #pragma pack(1);
 
 typedef struct {
@@ -142,7 +148,7 @@ typedef struct {
 #pragma pack();
 
 void ArtNet_Init(struct netif *netif, char* portConfig);
-void ArtNet_InputTick();
+void ArtNet_InputTick(char forceTransmit);
 void ArtNet_TimeoutTick();
 
 #endif

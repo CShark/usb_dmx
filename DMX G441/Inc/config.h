@@ -32,7 +32,7 @@ typedef struct {
     char ArtNetNetwork;
     char ArtNetSubnet;
     char ArtNetUniverse[8];
-    char ArtNetPortFlags[4];
+    ArtNet_Port_Flags ArtNetPortFlags[4];
 
     ArtNet_Failover ArtNetFailoverMode;
     char ArtNetPortDirection; // 00 | 00 | 00 | 00 -> First bit = enable override, Second = Input (1) or Output (0)
