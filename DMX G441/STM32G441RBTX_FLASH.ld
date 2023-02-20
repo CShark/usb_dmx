@@ -175,7 +175,7 @@ SECTIONS
     . = ALIGN(8);
   } >RAM
 
-  .usbbuffer :
+  .usbbuffer (NOLOAD) :
   {
       *(.usbbuf)
       *(.usbbuf*)

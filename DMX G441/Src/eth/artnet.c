@@ -426,7 +426,7 @@ void ArtNet_InputTick(char forceTransmit) {
 
                 reply->Net = config->ArtNetNetwork & 0x7F;
                 reply->SubUni = ((config->ArtNetSubnet & 0x0F) << 4) | (config->ArtNetUniverse[i] & 0x0F);
-                reply->Length = 512;
+                reply->Length = UI16_LITTLE_ENDIAN(512);
 
                 char *buffer = USART_GetDmxBuffer(i);
                 memcpy(reply->Data, buffer, 512);
