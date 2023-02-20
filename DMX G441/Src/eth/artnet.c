@@ -136,7 +136,7 @@ static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port) {
 
     reply->Port = UI16_BIG_ENDIAN(0x1936);
 
-    reply->VersInfo = UI16_LITTLE_ENDIAN(0);
+    reply->VersInfo = UI16_LITTLE_ENDIAN(1);
     reply->OEM = 0xFFFF;
 
     reply->NetSwitch = config->ArtNetNetwork;
@@ -233,7 +233,6 @@ static void ArtNet_HandleIpProg(ArtNet_IpProg *data, const ip_addr_t *addr, u16_
     reply->ProgSubnet[3] = ip4_addr4(&artif->netmask);
 
     reply->ProgPort = UI16_LITTLE_ENDIAN(artnet_port);
-
     struct pbuf *p;
     p = pbuf_alloc(PBUF_TRANSPORT, sizeof(reply), PBUF_POOL);
     memcpy_pbuf(p, reply, sizeof(reply));
