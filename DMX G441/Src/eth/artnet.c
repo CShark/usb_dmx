@@ -136,7 +136,7 @@ static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port) {
 
     reply->Port = UI16_BIG_ENDIAN(0x1936);
 
-    reply->VersInfo = UI16_LITTLE_ENDIAN(1);
+    reply->VersInfo = UI16_LITTLE_ENDIAN(2);
     reply->OEM = 0xFFFF;
 
     reply->NetSwitch = config->ArtNetNetwork;

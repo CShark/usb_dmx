@@ -132,10 +132,10 @@ void USART_ChangePortDirection(char port, char direction) {
                 memclr(dmx_buffer[port], 513);
 
                 // Change direction
-                if(direction == USART_INPUT) {
+                if (direction == USART_INPUT) {
                     USART_ConfigReceive(&dmx_config[port]);
                     USART_StartReceiveDMX(&dmx_config[port]);
-                }else{
+                } else {
                     USART_ConfigTransmit(&dmx_config[port]);
                     USART_StartTransmitDmx(&dmx_config[port]);
                 }
@@ -171,12 +171,12 @@ char *USART_GetDmxBuffer(char port) {
 }
 
 char USART_IsInputNew(char port) {
-    if(port >= 0 && port < 4) {
+    if (port >= 0 && port < 4) {
         return dmx_config[port].NewInput;
     }
 }
 void USART_ClearInputNew(char port) {
-    if(port >= 0 && port < 4) {
+    if (port >= 0 && port < 4) {
         dmx_config[port].NewInput = 0;
     }
 }
@@ -281,7 +281,7 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
                 }
             }
         } else {
-            char data = dmx->Usart->RDR;
+            volatile char data = dmx->Usart->RDR;
 
             dmx->Usart->ICR |= USART_ICR_NECF | USART_ICR_PECF;
 

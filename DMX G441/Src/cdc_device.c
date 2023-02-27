@@ -1,5 +1,6 @@
 #include "cdc_device.h"
 #include "config.h"
+#include "dmx_usart.h"
 #include "platform.h"
 
 static char buffer[64];
@@ -100,6 +101,13 @@ void CDC_HandlePacket(char ep, short length) {
     case 0xF2:
         Config_Reset();
         Config_ApplyNetwork();
+        break;
+
+    case 0xD0:
+        if (length == 2 && buffer[1] >= 0 && buffer[1] < 4) {
+            char *buffer = USART_GetDmxBuffer(buffer[1]);
+            CDC_TransmitData(buffer, 512);
+        }
         break;
     }
 }
