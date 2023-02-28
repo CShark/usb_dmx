@@ -20,17 +20,18 @@ char CDC_SetupPacket(USB_SETUP_PACKET *setup, char *data, short length) {
         if (setup->Value & 0x01) { // DTR
             CDC_SendID();
         }
-        break;
+        return USB_OK;
     case CDC_CONFIG_GETLINECODING:
         USB_Transmit(0, lineCoding, 7);
-        break;
+        return USB_OK;
     case CDC_CONFIG_SETLINECODING:
         for (int i = 0; i < 7; i++) {
             lineCoding[i] = data[i];
         }
         return USB_OK;
-        break;
     }
+
+    return USB_ERR;
 }
 
 void CDC_HandlePacket(char ep, short length) {
