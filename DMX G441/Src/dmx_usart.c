@@ -290,14 +290,19 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
                 dmx->Usart->CR3 &= ~USART_CR3_DMAR;
                 dmx->Dma->CCR &= ~DMA_CCR_EN;
                 dmx->Usart->ICR |= USART_ICR_FECF;
+                dmx->BreakStatus = 1; 
             } else if ((dmx->Usart->CR3 & USART_CR3_DMAR) == 0) {
                 // check for 0 byte
-                if (data == 0x00) {
-                    dmx->Usart->CR3 |= USART_CR3_DMAR;
-                    dmx->Dma->CMAR = dmx->DmxBuffer + 1;
-                    dmx->Dma->CNDTR = 512;
-                    dmx->Dma->CCR |= DMA_CCR_EN;
-                    dmx->NewInput = 1;
+                if (dmx->BreakStatus) {
+                    if (data == 0x00) {
+                        dmx->Usart->CR3 |= USART_CR3_DMAR;
+                        dmx->Dma->CMAR = dmx->DmxBuffer + 1;
+                        dmx->Dma->CNDTR = 512;
+                        dmx->Dma->CCR |= DMA_CCR_EN;
+                        dmx->NewInput = 1;
+                    }else{
+                        dmx->BreakStatus = 0;
+                    }
                 }
             }
         }
