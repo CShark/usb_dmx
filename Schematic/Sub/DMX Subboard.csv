@@ -1,0 +1,7 @@
+"#","Reference","Qty","Value","Footprint","DNP"
+"1","J1","1","OLED","Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical",""
+"2","J2","1","Connector","Connector_FFC-FPC:TE_1-84952-0_1x10-1MP_P1.0mm_Horizontal",""
+"3","SW1","1","Back","Button_Switch_THT:SW_PUSH_6mm_H8.5mm",""
+"4","SW2","1","Up","Button_Switch_THT:SW_PUSH_6mm_H8.5mm",""
+"5","SW3","1","Down","Button_Switch_THT:SW_PUSH_6mm_H8.5mm",""
+"6","SW4","1","Confirm","Button_Switch_THT:SW_PUSH_6mm_H8.5mm",""
