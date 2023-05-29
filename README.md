@@ -27,7 +27,7 @@ The total cost for this device is currently aproximately 80€. You can save mon
 <summary>Mainboard (~30€)</summary>
 
 | Amount | Type | Value | Footprint |
-|-|-|-|-|-|
+|-|-|-|-|
 | 4 | Capacitor | 1μF | 0603 |
 | 7 | Capacitor | 100nF | 0603 |
 | 2 | Capacitor | 20pF | 0603 |
@@ -51,13 +51,14 @@ The total cost for this device is currently aproximately 80€. You can save mon
 | 4 | Transceiver | MAX3440E | SOIC-8 |
 | 1 | Crystal | 25MHz | HC49 |
 | 1 | μC | STM32G484RE | LQFP64 |
+    
 </details>
 
 <details>
 <summary>Display Board (~5€)</summary>
 
 | Amount | Type | Footprint |
-|-|-|-|-|-|
+|-|-|-|
 | 1 | OLED-Display | 0.96" with I²C |
 | 1 | FFC Connector | 1x10, Pitch 1mm |
 | 4 | Switch | Through Hole, Height 9.5-10mm |
@@ -68,7 +69,7 @@ The total cost for this device is currently aproximately 80€. You can save mon
 <details>
 <summary>Mechanical parts (~40€)</summary>
 
-| Amount | Type | Specs | 
+| Amount | Type | Specs |
 |-|-|-|
 | 1 | Case | TEKO TEKAL 31.29, or any case that takes Eurocard-sized PCBs (100x100mm) |
 | 4 | XLR Connector | An individual mix of Female and Male XLR 3- and 5-Pin connectors, depending on your needs |
