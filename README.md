@@ -21,10 +21,10 @@ The PCB is designed as a four layer board, as with this small size the price was
 ![](/Images/exploded.png)
 
 ### BOM
-The total cost for this device is currently aproximately 80€. You can save money by printing your own case (25€), finding a cheaper STM32G4xxRE variant at your local dealer (11€), finding cheaper XLR connectors (5€) and skipping on the display module (5€). 
+The total cost for this device is currently aproximately 90€. You can save money by printing your own case (25€), finding a cheaper STM32G4xxRE variant at your local dealer (11€), finding cheaper XLR connectors (5€) and skipping on the display module (5€). 
 
 <details>
-<summary>Mainboard (~30€)</summary>
+<summary>Mainboard (~40€)</summary>
 
 | Amount | Type | Value | Footprint |
 |-|-|-|-|
