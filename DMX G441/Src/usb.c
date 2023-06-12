@@ -1,6 +1,6 @@
 #include "usb.h"
 #include "profiling.h"
-#include "stm32g441xx.h"
+#include "platform.h"
 #include "usb_config.h"
 
 #define __USB_MEM __attribute__((section(".usbbuf")))

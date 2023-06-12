@@ -123,22 +123,22 @@ a lot of data that needs to be copied, this should be set high. */
 /* MEMP_NUM_PBUF: the number of memp struct pbufs. If the application
    sends a lot of data out of ROM (or other static memory), this
    should be set high. */
-#define MEMP_NUM_PBUF           10
+#define MEMP_NUM_PBUF           16
 /* MEMP_NUM_RAW_PCB: the number of UDP protocol control blocks. One
    per active RAW "connection". */
-#define MEMP_NUM_RAW_PCB        3
+#define MEMP_NUM_RAW_PCB        4
 /* MEMP_NUM_UDP_PCB: the number of UDP protocol control blocks. One
    per active UDP "connection". */
 #define MEMP_NUM_UDP_PCB        6
 /* MEMP_NUM_TCP_PCB: the number of simulatenously active TCP
    connections. */
-#define MEMP_NUM_TCP_PCB        4
+#define MEMP_NUM_TCP_PCB        6
 /* MEMP_NUM_TCP_PCB_LISTEN: the number of listening TCP
    connections. */
-#define MEMP_NUM_TCP_PCB_LISTEN 4
+#define MEMP_NUM_TCP_PCB_LISTEN 8
 /* MEMP_NUM_TCP_SEG: the number of simultaneously queued TCP
    segments. */
-#define MEMP_NUM_TCP_SEG        8
+#define MEMP_NUM_TCP_SEG        16
 /* MEMP_NUM_SYS_TIMEOUT: the number of simulateously active
    timeouts. */
 #define MEMP_NUM_SYS_TIMEOUT    10
@@ -152,8 +152,8 @@ a lot of data that needs to be copied, this should be set high. */
 /* MEMP_NUM_TCPIP_MSG_*: the number of struct tcpip_msg, which is used
    for sequential API communication and incoming packets. Used in
    src/api/tcpip.c. */
-#define MEMP_NUM_TCPIP_MSG_API   16
-#define MEMP_NUM_TCPIP_MSG_INPKT 16
+#define MEMP_NUM_TCPIP_MSG_API   8
+#define MEMP_NUM_TCPIP_MSG_INPKT 8
 
 
 /* ---------- Pbuf options ---------- */
@@ -161,7 +161,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define PBUF_POOL_SIZE          16
 
 /* PBUF_POOL_BUFSIZE: the size of each pbuf in the pbuf pool. */
-#define PBUF_POOL_BUFSIZE       256
+#define PBUF_POOL_BUFSIZE       512
 
 /** SYS_LIGHTWEIGHT_PROT
  * define SYS_LIGHTWEIGHT_PROT in lwipopts.h if you want inter-task protection
@@ -172,7 +172,7 @@ a lot of data that needs to be copied, this should be set high. */
 
 
 /* ---------- TCP options ---------- */
-#define LWIP_TCP                0
+#define LWIP_TCP                1
 #define TCP_TTL                 255
 
 #define LWIP_ALTCP              (LWIP_TCP)
@@ -202,7 +202,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define TCP_SNDLOWAT           (TCP_SND_BUF/2)
 
 /* TCP receive window. */
-#define TCP_WND                 (2 * 1024)
+#define TCP_WND                 (4 * 1024)
 
 /* Maximum number of retransmissions of data segments. */
 #define TCP_MAXRTX              12

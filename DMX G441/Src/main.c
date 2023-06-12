@@ -69,7 +69,7 @@ int main(void) {
             } else {
                 ArtNet_InputTick(0);
             }
-            
+
             NCM_FlushTx();
             last_inputTick = sys_now();
         }
@@ -80,90 +80,27 @@ int main(void) {
 }
 
 /**
- * @brief Get the configuration for each port based on the resistors on  the back
+ * @brief Get the configuration for each port based on the dip switches
  * @details
- * No resistor = Disabled
  * GND = Output
  * 3.3V = Input
  */
 static void ReadPortConfig() {
-    // Turn on ADC
-    ADC1->CR &= ~ADC_CR_DEEPPWD;
-    ADC1->CR |= ADC_CR_ADVREGEN;
-
-    // wait 20μs
-    delay_ms(1);
-
-    // ADC Calibration
-    ADC1->CR &= ~ADC_CR_ADEN;
-    ADC1->CR &= ~ADC_CR_ADCALDIF;
-    ADC1->CR |= ADC_CR_ADCAL;
-    while (ADC1->CR & ADC_CR_ADCAL) {
-    }
-    ADC1->CR |= ADC_CR_ADEN;
-
-    // Patch ADC Channels
-    ADC1->CFGR |= (2 << ADC_CFGR_RES_Pos);
-    ADC1->SMPR1 |= (7 << ADC_SMPR1_SMP1_Pos) | (7 << ADC_SMPR1_SMP2_Pos) | (7 << ADC_SMPR1_SMP3_Pos) | (7 << ADC_SMPR1_SMP4_Pos);
-
-    // Run ADC
-    char data[12] = {0};
-
-    for (int i = 0; i < 4; i++) {
-        ADC1->SQR1 &= ~ADC_SQR1_SQ1_Msk;
-        ADC1->SQR1 |= ((i + 1) << ADC_SQR1_SQ1_Pos);
-
-        ADC1->CR |= ADC_CR_ADSTART;
-        while (!(ADC1->ISR & ADC_ISR_EOC)) {
-        }
-
-        data[i] = ADC1->DR;
-    }
-
-    // Activate pulldowns
-    GPIOA->PUPDR |= (2 << GPIO_PUPDR_PUPD0_Pos) | (2 << GPIO_PUPDR_PUPD1_Pos) | (2 << GPIO_PUPDR_PUPD2_Pos) | (2 << GPIO_PUPDR_PUPD3_Pos);
-
-    // Redo measurements
-    for (int i = 0; i < 4; i++) {
-        ADC1->SQR1 &= ~ADC_SQR1_SQ1_Msk;
-        ADC1->SQR1 |= ((i + 1) << ADC_SQR1_SQ1_Pos);
-
-        ADC1->CR |= ADC_CR_ADSTART;
-        while (!(ADC1->ISR & ADC_ISR_EOC)) {
-        }
-
-        data[i + 4] = ADC1->DR;
-    }
-
-    // deactivate pulldowns
-    GPIOA->PUPDR &= ~0xFF;
-
-    // redo measurements
-    for (int i = 0; i < 4; i++) {
-        ADC1->SQR1 &= ~ADC_SQR1_SQ1_Msk;
-        ADC1->SQR1 |= ((i + 1) << ADC_SQR1_SQ1_Pos);
-
-        ADC1->CR |= ADC_CR_ADSTART;
-        while (!(ADC1->ISR & ADC_ISR_EOC)) {
-        }
-
-        data[i + 8] = ADC1->DR;
-    }
+    // Enable inputs on PortA0..3 with pull down
+    GPIOA->MODER &= ~(GPIO_MODER_MODE0_Msk | GPIO_MODER_MODE1_Msk | GPIO_MODER_MODE2_Msk | GPIO_MODER_MODE3_Msk);
+    GPIOA->PUPDR |= GPIO_PUPDR_PUPD0_1 | GPIO_PUPDR_PUPD1_1 | GPIO_PUPDR_PUPD2_1 | GPIO_PUPDR_PUPD3_1;
 
     // detect configuration
     for (int i = 0; i < 4; i++) {
-        if ((data[i] & 0xC0) == 0xC0 && data[i + 4] > 0 && (data[i + 8] & 0xC0) == 0xC0) {
+        if ((GPIOA->IDR & (1 << i)) != 0) {
             portConfig[i] = USART_INPUT;
-        } else if (data[i] == 0 && data[i + 4] == 0 && data[i + 8] == 0) {
-            portConfig[i] = USART_OUTPUT;
         } else {
-            // unconnected port, don't patch.
-            // If no resistor is present, value will float w/o pulldown
+            portConfig[i] = USART_OUTPUT;
         }
     }
 
-    // Disable ADC
-    ADC1->CR |= ADC_CR_DEEPPWD;
+    // Disable Ports
+    GPIOA->MODER |= (GPIO_MODER_MODE0_Msk | GPIO_MODER_MODE1_Msk | GPIO_MODER_MODE2_Msk | GPIO_MODER_MODE3_Msk);
 }
 
 /**

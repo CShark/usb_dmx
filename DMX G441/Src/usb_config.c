@@ -1,7 +1,7 @@
 #include "usb_config.h"
 #include "cdc_device.h"
 #include "ncm_device.h"
-#include "stm32g441xx.h"
+#include "platform.h"
 
 // Example definition for a NCM-Device
 static const USB_DESCRIPTOR_DEVICE DeviceDescriptor = {

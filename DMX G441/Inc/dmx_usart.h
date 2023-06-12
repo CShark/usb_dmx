@@ -1,7 +1,7 @@
 #ifndef __DMX_USART_H
 #define __DMX_USART_H
 
-#include "stm32g441xx.h"
+#include "platform.h"
 #include "eth/artnet.h"
 
 typedef enum {

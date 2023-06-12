@@ -35,7 +35,7 @@ The total cost for this device is currently aproximately 90€. You can save mon
 | 1 | Capacitor | 4.7μF | 0603 |
 | 8 | TVS Diode | | SMA |
 | 1 | USB-C Receptacle | | |
-| 1 | FFC Connector | 1x10, Pitch 1mm |
+| 1 | FFC Connector | | 1x10, Pitch 1mm |
 | 4 | Terminal Block | | 1x3, Pitch 2.54mm |
 | 1 | Pin Header | | 1x3, Pitch 2.54mm |
 | 1 | Jumper | | 1x2, Pitch 2.54mm |
@@ -61,8 +61,8 @@ The total cost for this device is currently aproximately 90€. You can save mon
 |-|-|-|
 | 1 | OLED-Display | 0.96" with I²C |
 | 1 | FFC Connector | 1x10, Pitch 1mm |
-| 4 | Switch | Through Hole, Height 9.5-10mm |
-| 1 | FFC Cable | 1x10, Pitch 1mm, Length ~100mm |
+| 4 | Switch | Through Hole, Height 10mm |
+| 1 | FFC Cable | 1x10, Pitch 1mm, Length ~100mm, Type B (opposing-side contacts) |
 
 </details>
 
@@ -75,10 +75,16 @@ The total cost for this device is currently aproximately 90€. You can save mon
 | 4 | XLR Connector | An individual mix of Female and Male XLR 3- and 5-Pin connectors, depending on your needs |
 | 9 | Screws | M2, Length 15mm, Countersink |
 | 9 | Nuts | M2 |
+| 1 | Acrylic Window | To be measured |
+| 1 | Spacer | M2, Length 6mm |
 | 1 | Mainboard PCB | | 
 | 1 | Display PCB | |
 
 </details>
+
+Here are two lists on digikey that include all necessary components, except for the mechanical parts and the oled-display. It does contain four XLR-Connectors though.
+- [Parts for the Mainboard](https://www.digikey.com/en/mylists/list/8UBRGNUC4X)
+- [Parts for the Display-Module](https://www.digikey.com/en/mylists/list/5N5ETFD0BY)
 
 ## Firmware
 The firmware is completely custom, only based on CMSIS (no HAL) and supports the important parts of the ArtNET protocol. Which port is an input and which an output can be set using the dip switches, but later be overwritten using either ArtNET commands, the WebUI or the display menu. The device also has a reset button to reset the configuration for when things go completely wrong. The firmware can be updated using the WebUI, if the device is completely bricked it can be put into bootloader mode using a jumper on the mainboard.

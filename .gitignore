@@ -32,3 +32,4 @@ _ReSharper*/
 packages/
 /Schematic/*/*-backups/*
 /3D Model/Render/*
+/Schematic/*/Gerber/*
