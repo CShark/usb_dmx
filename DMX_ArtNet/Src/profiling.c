@@ -19,8 +19,9 @@ static char event_ignore = 0;
 /* Private function prototypes ---------------------------------------*/
 /* -------------------------------------------------------------------*/
 
-int _write(int file, char *data, int len) {
+int _write(int file, unsigned char *data, int len) {
     CDC_TransmitData(data, len);
+    return len;
 }
 
 /**
@@ -111,9 +112,9 @@ void PROFILING_STOP(void) {
             delta_t = timestamp - time_prev;
             time_prev = timestamp;
             if (event_args[i][0] == 0 && event_args[i][1] == 0 && event_args[i][2] == 0 && event_args[i][3] == 0) {
-                DEBUG_PRINTF("%-30s:%9d μs | +%9d μs\r\n", event_name[i], timestamp, delta_t);
+                DEBUG_PRINTF("%-30s:%9ld μs | +%9ld μs\r\n", event_name[i], timestamp, delta_t);
             } else {
-                DEBUG_PRINTF("%-30s:%9d μs | +%9d μs | %02X %02X %02X %02X\r\n", event_name[i], timestamp, delta_t, event_args[i][0], event_args[i][1], event_args[i][2], event_args[i][3]);
+                DEBUG_PRINTF("%-30s:%9ld μs | +%9ld μs | %02X %02X %02X %02X\r\n", event_name[i], timestamp, delta_t, event_args[i][0], event_args[i][1], event_args[i][2], event_args[i][3]);
             }
         }
 

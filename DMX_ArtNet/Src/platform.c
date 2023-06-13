@@ -20,7 +20,7 @@ void *memcpy(void *destination, const void *source, unsigned int num) {
         }
     }
 
-    return 1;
+    return (void *)1;
 }
 
 void memcpy_pbuf(struct pbuf *p, const void *source, unsigned int num) {
@@ -79,7 +79,7 @@ int memcmp(const void *a, const void *b, unsigned int num) {
         long *la = (long *)a;
         long *lb = (long *)b;
 
-        for (int i = 0; i = num / sizeof(long); i++) {
+        for (int i = 0; i < (num / sizeof(long)); i++) {
             if (la[i] != lb[i]) {
                 return 0;
             }

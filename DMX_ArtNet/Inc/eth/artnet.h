@@ -148,7 +148,7 @@ typedef struct {
 } ArtNet_Input;
 #pragma pack()
 
-void ArtNet_Init(struct netif *netif, char* portConfig);
+void ArtNet_Init(struct netif *netif, const unsigned char* portConfig);
 void ArtNet_InputTick(char forceTransmit);
 void ArtNet_TimeoutTick();
 

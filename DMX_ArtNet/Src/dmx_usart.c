@@ -1,7 +1,7 @@
 #include "dmx_usart.h"
 #include "platform.h"
 
-static char dmx_buffer[4][513] = {{0}, {0}, {0}, {0}};
+static unsigned char dmx_buffer[4][513] = {{0}, {0}, {0}, {0}};
 
 USART_DmxConfig dmx_config[] = {
     {.Usart = USART1,
@@ -74,7 +74,7 @@ void USART_Init() {
     }
 }
 
-void USART_InitPortDirections(char *portDirection) {
+void USART_InitPortDirections(const unsigned char *portDirection) {
     for (int i = 0; i < 4; i++) {
         // 16MHz HSI16, 250kbps = 64 USARTDIV, OVER8=0
         NVIC_SetPriority(dmx_config[i].Irq, 1);
@@ -143,7 +143,7 @@ void USART_ChangePortDirection(unsigned char port, char direction) {
     }
 }
 
-void USART_SetBuffer(unsigned char port, char *buffer, short length) {
+void USART_SetBuffer(unsigned char port, const unsigned char *buffer, unsigned short length) {
     if (port < 4) {
         if (length <= 512) {
             for (int i = 0; i < length; i++) {
@@ -163,7 +163,7 @@ void USART_ClearBuffer(unsigned char port) {
     }
 }
 
-char *USART_GetDmxBuffer(unsigned char port) {
+unsigned char *USART_GetDmxBuffer(unsigned char port) {
     if (port < 4) {
         return dmx_buffer[port] + 1;
     }
@@ -171,7 +171,7 @@ char *USART_GetDmxBuffer(unsigned char port) {
     return 0;
 }
 
-char USART_IsInputNew(unsigned char port) {
+unsigned char USART_IsInputNew(unsigned char port) {
     if (port < 4) {
         return dmx_config[port].NewInput;
     }
@@ -192,7 +192,7 @@ static void USART_ConfigTransmit(USART_DmxConfig *dmx) {
     dmx->Usart->CR1 |= USART_CR1_UE;
 
     dmx->DRPort->BSRR = 1 << dmx->DRPin;
-    dmx->Dma->CPAR = &(dmx->Usart->TDR);
+    dmx->Dma->CPAR = (uint32_t)&dmx->Usart->TDR;
     dmx->Dma->CMAR = (uint32_t)dmx->DmxBuffer;
     dmx->Dma->CNDTR = 513;
     dmx->Dma->CCR = DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_TCIE | DMA_CCR_TEIE;
@@ -209,8 +209,8 @@ static void USART_ConfigReceive(USART_DmxConfig *dmx) {
     dmx->Usart->CR1 |= USART_CR1_UE;
 
     dmx->DRPort->BSRR = (1 << dmx->DRPin) << 16;
-    dmx->Dma->CPAR = &(dmx->Usart->RDR);
-    dmx->Dma->CMAR = dmx->DmxBuffer;
+    dmx->Dma->CPAR = (uint32_t)&dmx->Usart->RDR;
+    dmx->Dma->CMAR = (uint32_t)dmx->DmxBuffer;
     dmx->Dma->CNDTR = 512;
     dmx->Dma->CCR = DMA_CCR_MINC | DMA_CCR_TCIE | DMA_CCR_TEIE;
     dmx->DmaMux->CCR = dmx->DmaMux_RX;
@@ -261,7 +261,7 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
                 dmx->Usart->CR1 |= USART_CR1_UE;
                 dmx->Usart->CR3 |= USART_CR3_DMAT;
                 dmx->Dma->CNDTR = 513;
-                dmx->Dma->CMAR = dmx->DmxBuffer;
+                dmx->Dma->CMAR = (uint32_t)dmx->DmxBuffer;
                 dmx->Usart->ICR |= USART_ICR_TCCF;
                 dmx->Dma->CCR |= DMA_CCR_EN;
 
@@ -300,7 +300,7 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
                 if (dmx->BreakStatus) {
                     if (data == 0x00) {
                         dmx->Usart->CR3 |= USART_CR3_DMAR;
-                        dmx->Dma->CMAR = dmx->DmxBuffer + 1;
+                        dmx->Dma->CMAR = (uint32_t)(dmx->DmxBuffer + 1);
                         dmx->Dma->CNDTR = 512;
                         dmx->Dma->CCR |= DMA_CCR_EN;
                         dmx->NewInput = 1;

@@ -99,6 +99,9 @@ static void DhcpServer_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, c
     case DHCP_Request:
         DhcpServer_Request(&options);
         break;
+    default:
+        // Ignore all other requests
+        break;
     }
 }
 

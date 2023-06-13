@@ -20,8 +20,8 @@ typedef struct {
     unsigned char RxBufferSize;
     unsigned char TxBufferSize;
     unsigned short Type;
-    void (*RxCallback)(char ep, short length);
-    void (*TxCallback)(char ep, short length);
+    void (*RxCallback)(unsigned char ep, short length);
+    void (*TxCallback)(unsigned char ep, short length);
 } USB_CONFIG_EP;
 
 #define USB_OK 0
@@ -43,7 +43,7 @@ void USB_HP_IRQHandler();
 /// @param buffer A pointer to the buffer containing the data
 /// @param length The number of bytes to sent
 /// @remark Will automatically split the transmission into multiple chunks if necessary
-void USB_Transmit(unsigned char ep, unsigned char* buffer, short length);
+void USB_Transmit(unsigned char ep, const unsigned char* buffer, short length);
 /// @brief Whether there is currently any unfinished transfer running
 /// @param ep The endpoint to check
 /// @remark Do not busy-wait on this during reception. It will stall the USB-ISR

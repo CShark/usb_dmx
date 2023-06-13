@@ -63,9 +63,9 @@ typedef struct NCM_CtrlTxInfo NCM_CtrlTxInfo;
 typedef struct NCM_BufferInfo NCM_BufferInfo;
 
 struct NCM_CtrlTxInfo {
-    char *buffer;
+    const unsigned char *buffer;
     unsigned short length;
-    NCM_CtrlTxInfo *next;
+    const NCM_CtrlTxInfo *next;
 };
 
 typedef enum {
@@ -75,7 +75,7 @@ typedef enum {
 } NCM_BufferState;
 
 struct NCM_BufferInfo {
-    char *buffer;
+    unsigned char *buffer;
     NCM_BufferState status;
     unsigned short length;
     unsigned short offset;
@@ -96,7 +96,7 @@ typedef struct {
     NCM_NTB_DATAPOINTER_16 *datagramm;
 } NCM_RX_BufferInfo;
 
-char NCM_SetupPacket(USB_SETUP_PACKET *setup, unsigned char *data, short length);
+char NCM_SetupPacket(USB_SETUP_PACKET *setup, const unsigned char *data, short length);
 void NCM_HandlePacket(unsigned char ep, short length);
 void NCM_Reset(char interface, char alternateId);
 void NCM_ControlTransmit(unsigned char ep, short length);
@@ -104,8 +104,8 @@ void NCM_ControlTransmit(unsigned char ep, short length);
 void NCM_LinkUp();
 void NCM_LinkDown();
 
-char *NCM_GetNextRxDatagramBuffer(short *length);
-char *NCM_GetNextTxDatagramBuffer(short length);
+unsigned char *NCM_GetNextRxDatagramBuffer(short *length);
+unsigned char *NCM_GetNextTxDatagramBuffer(short length);
 void NCM_FlushTx();
 void NCM_BufferTransmitted(unsigned char ep, short length);
 

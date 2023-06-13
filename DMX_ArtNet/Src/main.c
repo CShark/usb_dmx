@@ -16,7 +16,7 @@ static void Clock_Init(void);
 static void GPIO_Init(void);
 static void ReadPortConfig(void);
 
-static char portConfig[] = {0, 0, 0, 0};
+static unsigned char portConfig[] = {0, 0, 0, 0};
 static struct netif ncm_if;
 
 /**

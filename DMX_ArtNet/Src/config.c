@@ -89,10 +89,10 @@ void Config_Store() {
     EE_WriteConfig(&activeConfig);
 }
 
-void Config_StoreFailsafeScene(char *buffer, char art_port) {
+void Config_StoreFailsafeScene(const unsigned char *buffer, char art_port) {
     EE_WriteFailover(buffer, art_port);
 }
-void Config_LoadFailsafeScene(char *target, int index) {
+void Config_LoadFailsafeScene(unsigned char *target, int index) {
     EE_ReadFailover(target, index);
 }
 

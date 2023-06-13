@@ -8,7 +8,7 @@ static unsigned char lineCoding[7];
 
 static void CDC_SendID();
 
-char CDC_SetupPacket(USB_SETUP_PACKET *setup, unsigned char *data, short length) {
+char CDC_SetupPacket(USB_SETUP_PACKET *setup, const unsigned char *data, short length) {
     // Windows requires us to remember the line coding
     switch (setup->Request) {
     case CDC_CONFIG_CONTROLLINESTATE:
@@ -65,10 +65,10 @@ void CDC_HandlePacket(unsigned char ep, short length) {
         break;
 
     case 0xB0:
-        CDC_TransmitData((char *)&Config_GetActive()->Mode, 1);
+        CDC_TransmitData((unsigned char *)&Config_GetActive()->Mode, 1);
         break;
     case 0xB1: {
-        char data[1 + 4 * 3];
+        unsigned char data[1 + 4 * 3];
         CONFIG *config = Config_GetActive();
         data[0] = config->DhcpServerEnable;
         for (int i = 0; i < 4; i++) {
@@ -80,7 +80,7 @@ void CDC_HandlePacket(unsigned char ep, short length) {
         CDC_TransmitData(data, sizeof(data));
     } break;
     case 0xB2: {
-        char data[4 * 3];
+        unsigned char data[4 * 3];
         CONFIG *config = Config_GetActive();
         for (int i = 0; i < 4; i++) {
             data[i] = ip4_addr_get_byte(&config->StaticIp, i);
@@ -105,7 +105,7 @@ void CDC_HandlePacket(unsigned char ep, short length) {
 
     case 0xD0:
         if (length == 2 && buffer[1] >= 0 && buffer[1] < 4) {
-            char *txBuffer = USART_GetDmxBuffer(buffer[1]);
+            unsigned char *txBuffer = USART_GetDmxBuffer(buffer[1]);
             CDC_TransmitData(txBuffer, 512);
         }
         break;
@@ -113,7 +113,7 @@ void CDC_HandlePacket(unsigned char ep, short length) {
 }
 
 static void CDC_SendID() {
-    USB_Transmit(4, UID->ID, sizeof(UID->ID));
+    //USB_Transmit(4, UID->ID, sizeof(UID->ID));
 }
 
 void CDC_TransmitData(unsigned char *data, int len) {

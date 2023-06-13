@@ -12,7 +12,7 @@ static const short hwaddr[6] = {0x12, 0x54, 0xF9, 0xD9, 0x1F, 0x18};
 static err_t ncm_netif_output(struct netif *netif, struct pbuf *p) {
     struct pbuf *q;
     short offset = 0;
-    char *buffer = NCM_GetNextTxDatagramBuffer(p->tot_len);
+    unsigned char *buffer = NCM_GetNextTxDatagramBuffer(p->tot_len);
 
     for (q = p; q != NULL; q = q->next) {
         memcpy(buffer + offset, q->payload, q->len);
@@ -29,7 +29,7 @@ static err_t ncm_netif_output(struct netif *netif, struct pbuf *p) {
 void ncm_netif_poll(struct netif *netif) {
     short length = 0;
     short offset = 0;
-    char *datagram;
+    unsigned char *datagram;
     struct pbuf *p, *q;
 
     datagram = NCM_GetNextRxDatagramBuffer(&length);

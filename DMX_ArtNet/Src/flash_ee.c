@@ -148,13 +148,13 @@ void EE_WriteConfig(CONFIG *config) {
     }
 }
 
-void EE_ReadFailover(char *buffer, int idx) {
+void EE_ReadFailover(unsigned char *buffer, int idx) {
     if (idx >= 0 && idx < 4) {
         memcpy(buffer, ((unsigned char *)FlashFailoverPage) + idx * 512, 512);
     }
 }
 
-void EE_WriteFailover(char *buffer, unsigned char art_port) {
+void EE_WriteFailover(const unsigned char *buffer, unsigned char art_port) {
     char buffers[4][512];
     memcpy(buffers, (unsigned char *)FlashFailoverPage, 4 * 512);
     memcpy(buffers[art_port], buffer, 512);

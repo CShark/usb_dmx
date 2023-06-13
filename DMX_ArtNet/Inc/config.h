@@ -61,8 +61,8 @@ CONFIG *Config_GetActive();
 void Config_ApplyNetwork();
 void Config_Store();
 
-void Config_StoreFailsafeScene(char *buffer, char art_port);
-void Config_LoadFailsafeScene(char* target, int index);
+void Config_StoreFailsafeScene(const unsigned char *buffer, char art_port);
+void Config_LoadFailsafeScene(unsigned char* target, int index);
 
 CONFIG Config_GetDefault();
 

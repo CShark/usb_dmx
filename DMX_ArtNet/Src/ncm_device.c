@@ -2,7 +2,7 @@
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
-static char buffers[6][2048] = {};
+static unsigned char buffers[6][2048] = {};
 
 static NCM_BufferInfo txDef[3] = {
     {.buffer = buffers[0],
@@ -51,7 +51,7 @@ static const USB_NTB_PARAMS ntb_params = {
 
 static void NCM_TransmitNextBuffer();
 
-char NCM_SetupPacket(USB_SETUP_PACKET *setup, unsigned char *data, short length) {
+char NCM_SetupPacket(USB_SETUP_PACKET *setup, const unsigned char *data, short length) {
     switch (setup->Request) {
     case NCM_GET_NTB_INPUT_SIZE: {
         if (length == 4) {
@@ -65,7 +65,7 @@ char NCM_SetupPacket(USB_SETUP_PACKET *setup, unsigned char *data, short length)
         break;
     }
     case NCM_SET_NTB_INPUT_SIZE: {
-        USB_NTB_INPUT_SIZE *info = data;
+        USB_NTB_INPUT_SIZE *info = (USB_NTB_INPUT_SIZE *)data;
 
         if (length >= 4) {
             ntbInputSize.NtbInMaxSize = info->NtbInMaxSize;
@@ -97,7 +97,7 @@ void NCM_HandlePacket(unsigned char ep, short length) {
         short received = 2048 - rx->offset;
         USB_Fetch(ep, rx->buffer + rx->offset, &received);
 
-        NCM_NTB_HEADER_16 *header = rx->buffer + rx->offset;
+        NCM_NTB_HEADER_16 *header = (NCM_NTB_HEADER_16 *)(rx->buffer + rx->offset);
 
         if (rx->offset == 0) {
             if (header->Signature[0] != 'N' || header->Signature[1] != 'C' || header->Signature[2] != 'M' || header->Signature[3] != 'H') {
@@ -118,7 +118,7 @@ void NCM_HandlePacket(unsigned char ep, short length) {
 
         if (rx->length == 0) {
             if (received < 64) {
-                NCM_NTB_HEADER_16 *header = rx->buffer;
+                NCM_NTB_HEADER_16 *header = (NCM_NTB_HEADER_16 *)rx->buffer;
                 header->BlockLength = rx->offset;
                 rx->length = rx->offset;
 
@@ -134,15 +134,15 @@ void NCM_HandlePacket(unsigned char ep, short length) {
     }
 }
 
-char *NCM_GetNextRxDatagramBuffer(short *length) {
+unsigned char *NCM_GetNextRxDatagramBuffer(short *length) {
     if (activeRxBuffer.ndp != 0 && (activeRxBuffer.datagramm == 0 || activeRxBuffer.datagramm->DatagramLength == 0 || activeRxBuffer.datagramm->DatagramOffset == 0)) {
         if (activeRxBuffer.ndp->NextNdpOffset == 0) {
             activeRxBuffer.ndp = 0;
             activeRxBuffer.datagramm = 0;
             activeRxBuffer.buffer->status = NCM_BUF_UNUSED;
         } else {
-            activeRxBuffer.ndp = activeRxBuffer.buffer->buffer + activeRxBuffer.ndp->NextNdpOffset;
-            activeRxBuffer.datagramm = activeRxBuffer.ndp + 1;
+            activeRxBuffer.ndp = (NCM_NTB_POINTER_16 *)(activeRxBuffer.buffer->buffer + activeRxBuffer.ndp->NextNdpOffset);
+            activeRxBuffer.datagramm = (NCM_NTB_DATAPOINTER_16 *)(activeRxBuffer.ndp + 1);
         }
     }
 
@@ -155,16 +155,16 @@ char *NCM_GetNextRxDatagramBuffer(short *length) {
         if (activeRxBuffer.buffer->status == NCM_BUF_READY) {
             activeRxBuffer.buffer->status = NCM_BUF_LOCKED;
 
-            NCM_NTB_HEADER_16 *header = activeRxBuffer.buffer->buffer;
-            activeRxBuffer.ndp = (char *)header + header->NdpOffset;
-            activeRxBuffer.datagramm = activeRxBuffer.ndp + 1;
+            NCM_NTB_HEADER_16 *header = (NCM_NTB_HEADER_16 *)activeRxBuffer.buffer->buffer;
+            activeRxBuffer.ndp = (NCM_NTB_POINTER_16 *)((char *)header + header->NdpOffset);
+            activeRxBuffer.datagramm = (NCM_NTB_DATAPOINTER_16 *)(activeRxBuffer.ndp + 1);
         }
     }
 
     if (activeRxBuffer.ndp) {
-        NCM_NTB_HEADER_16 *header = activeRxBuffer.buffer->buffer;
+        NCM_NTB_HEADER_16 *header = (NCM_NTB_HEADER_16 *)activeRxBuffer.buffer->buffer;
 
-        if (activeRxBuffer.ndp > activeRxBuffer.buffer->buffer + header->BlockLength) {
+        if ((void *)activeRxBuffer.ndp > (void *)(activeRxBuffer.buffer->buffer + header->BlockLength)) {
             // Broken ndp reference
             activeRxBuffer.ndp = 0;
             activeRxBuffer.datagramm = 0;
@@ -199,7 +199,7 @@ char *NCM_GetNextRxDatagramBuffer(short *length) {
     }
 }
 
-char *NCM_GetNextTxDatagramBuffer(short length) {
+unsigned char *NCM_GetNextTxDatagramBuffer(short length) {
     // check size constraints
     char maxDatagrams = MIN(10, ntbInputSize.NtbInMaxDatagrams);
     if (maxDatagrams == 0) {
@@ -229,8 +229,8 @@ void NCM_FlushTx() {
     if (activeTxBuffer.datagramCount > 0 && activeTxBuffer.buffer->status == NCM_BUF_UNUSED) {
         unsigned short offset = (activeTxBuffer.offset + (4 - 1)) & -4;
 
-        NCM_NTB_HEADER_16 *header = activeTxBuffer.buffer->buffer;
-        NCM_NTB_POINTER_16 *ndp = activeTxBuffer.buffer->buffer + offset;
+        NCM_NTB_HEADER_16 *header = (NCM_NTB_HEADER_16 *)activeTxBuffer.buffer->buffer;
+        NCM_NTB_POINTER_16 *ndp = (NCM_NTB_POINTER_16 *)(activeTxBuffer.buffer->buffer + offset);
 
         header->NdpOffset = offset;
         header->HeaderLength = sizeof(NCM_NTB_HEADER_16);
@@ -250,13 +250,13 @@ void NCM_FlushTx() {
         offset += sizeof(NCM_NTB_POINTER_16);
 
         for (int i = 0; i < activeTxBuffer.datagramCount; i++) {
-            NCM_NTB_DATAPOINTER_16 *datagram = (char *)header + offset;
+            NCM_NTB_DATAPOINTER_16 *datagram = (NCM_NTB_DATAPOINTER_16 *)((char *)header + offset);
 
             (*datagram) = activeTxBuffer.datagrams[i];
             offset += sizeof(NCM_NTB_DATAPOINTER_16);
         }
 
-        NCM_NTB_DATAPOINTER_16 *terminator = (char *)header + offset;
+        NCM_NTB_DATAPOINTER_16 *terminator = (NCM_NTB_DATAPOINTER_16 *)((char *)header + offset);
         terminator->DatagramLength = 0;
         terminator->DatagramOffset = 0;
         offset += sizeof(NCM_NTB_DATAPOINTER_16);
@@ -325,19 +325,19 @@ static const USB_SETUP_PACKET nwDisconnected = {
     .Length = 0};
 
 static const NCM_CtrlTxInfo LinkUp[2] = {
-    {.buffer = &nwSpeedChange,
+    {.buffer = (unsigned char *)&nwSpeedChange,
      .length = sizeof(nwSpeedChange),
      .next = &LinkUp[1]},
-    {.buffer = &nwConnected,
+    {.buffer = (unsigned char *)&nwConnected,
      .length = sizeof(nwConnected),
      .next = 0}};
 
 static const NCM_CtrlTxInfo LinkDown = {
-    .buffer = &nwDisconnected,
+    .buffer = (unsigned char *)&nwDisconnected,
     .length = sizeof(nwDisconnected),
     .next = 0};
 
-static NCM_CtrlTxInfo *nextTransmission = {0};
+static const NCM_CtrlTxInfo *nextTransmission = {0};
 
 static void NCM_ControlTransmission() {
     if (nextTransmission != 0) {

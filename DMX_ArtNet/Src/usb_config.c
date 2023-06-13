@@ -211,7 +211,7 @@ static void AddToDescriptor(const void *data, short *offset) {
     *offset += length;
 }
 
-unsigned char *USB_GetConfigDescriptor(short *length) {
+unsigned char *USB_GetConfigDescriptor(unsigned short *length) {
     if (ConfigurationBuffer[0] == 0) {
         short offset = 0;
         AddToDescriptor(&ConfigDescriptor, &offset);
@@ -243,7 +243,7 @@ unsigned char *USB_GetConfigDescriptor(short *length) {
     return ConfigurationBuffer;
 }
 
-unsigned short *USB_GetString(char index, short lcid, short *length) {
+unsigned short *USB_GetString(char index, short lcid, unsigned short *length) {
     // Strings need to be in unicode (thus prefixed with u"...")
     // The length is double the character count + 2 — or use VSCode which will show the number of bytes on hover
     if (index == 1) {
@@ -266,7 +266,7 @@ unsigned short *USB_GetString(char index, short lcid, short *length) {
     return 0;
 }
 
-char *USB_GetOSDescriptor(short *length) {
+unsigned char *USB_GetOSDescriptor(unsigned short *length) {
     return 0;
 }
 
@@ -309,7 +309,7 @@ void USB_ConfigureEndpoints() {
     USB_SetEPConfig(CDCDataEp);
 }
 
-char USB_HandleClassSetup(USB_SETUP_PACKET *setup, unsigned char *data, short length) {
+char USB_HandleClassSetup(USB_SETUP_PACKET *setup, const unsigned char *data, short length) {
     // Route the setup packets based on the Interface / Class Index
     if (setup->Index == 0) {
         NCM_SetupPacket(setup, data, length);

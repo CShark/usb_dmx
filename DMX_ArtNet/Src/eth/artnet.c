@@ -11,8 +11,8 @@ static struct udp_pcb *artnet;
 static struct netif *artif;
 static short artnet_port = 6454;
 
-static char artnet_portConfig[4];
-static char *initial_portConfig;
+static unsigned char artnet_portConfig[4];
+static const unsigned char *initial_portConfig;
 static unsigned int artnet_timeout[4];
 
 static CONFIG *config;
@@ -25,7 +25,7 @@ static void ArtNet_HandleOutput(ArtNet_Dmx *data);
 static void ArtNet_HandleInput(ArtNet_Input *data, const ip_addr_t *addr, u16_t port);
 static void ArtNet_ApplyFailover(int idx);
 
-void ArtNet_Init(struct netif *netif, char *portConfig) {
+void ArtNet_Init(struct netif *netif, const unsigned char *portConfig) {
     initial_portConfig = portConfig;
     artif = netif;
     artnet = udp_new();
@@ -371,7 +371,7 @@ static void ArtNet_ApplyFailover(int idx) {
             memclr(USART_GetDmxBuffer(idx), 512);
             break;
         case ArtFail_Full: {
-            char *buffer = USART_GetDmxBuffer(idx);
+            unsigned char *buffer = USART_GetDmxBuffer(idx);
             for (int i = 0; i < 512; i++) {
                 buffer[i] = 0xFF;
             }
@@ -400,7 +400,7 @@ void ArtNet_InputTick(char forceTransmit) {
                 reply->SubUni = ((config->ArtNet[i].Subnet & 0x0F) << 4) | (config->ArtNet[i].Universe & 0x0F);
                 reply->Length = UI16_LITTLE_ENDIAN(512);
 
-                char *buffer = USART_GetDmxBuffer(i);
+                unsigned char *buffer = USART_GetDmxBuffer(i);
                 memcpy(reply->Data, buffer, 512);
 
                 struct pbuf *p;

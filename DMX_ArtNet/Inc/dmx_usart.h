@@ -16,7 +16,7 @@ typedef struct {
     GPIO_TypeDef *RxPort;
     DMAMUX_Channel_TypeDef *DmaMux;
     DMA_Channel_TypeDef *Dma;
-    char *DmxBuffer;
+    unsigned char *DmxBuffer;
 
     char DmaMux_RX;
     char DmaMux_TX;
@@ -44,15 +44,15 @@ typedef struct {
 #define USART_BRRBREAK (800 << 1)
 
 void USART_Init();
-void USART_InitPortDirections(char *portDirection);
+void USART_InitPortDirections(const unsigned char *portDirection);
 
 void USART_SetPortState(unsigned char port, char enable);
 void USART_AlterPortFlags(unsigned char port, ArtNet_Port_Flags mask, char value);
 void USART_ChangePortDirection(unsigned char port, char direction);
-void USART_SetBuffer(unsigned char port, char *buffer, short length);
+void USART_SetBuffer(unsigned char port, const unsigned char *buffer, unsigned short length);
 void USART_ClearBuffer(unsigned char port);
-char *USART_GetDmxBuffer(unsigned char port);
-char USART_IsInputNew(unsigned char port);
+unsigned char *USART_GetDmxBuffer(unsigned char port);
+unsigned char USART_IsInputNew(unsigned char port);
 void USART_ClearInputNew(unsigned char port);
 
 void USART_BusyCheck();
