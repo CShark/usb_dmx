@@ -53,7 +53,7 @@ static void DhcpServer_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, c
 
     pbuf_free(p);
 
-    DHCP_PACKET *header = net_buffer;
+    DHCP_PACKET *header = (DHCP_PACKET *)net_buffer;
     DHCP_Options options = {
         .Header = header};
 
@@ -70,16 +70,16 @@ static void DhcpServer_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, c
         } else {
             switch (net_buffer[offset]) {
             case 53: // DHCP Message Type
-                options.Type = &net_buffer[offset];
+                options.Type = (DHCP_Type *)&net_buffer[offset];
                 break;
             case 50: // Request IP Address
-                options.RequestedIp = &net_buffer[offset];
+                options.RequestedIp = (DHCP_IpOption *)&net_buffer[offset];
                 break;
             case 61: // Client Identifier
-                options.ClientIdentifier = &net_buffer[offset];
+                options.ClientIdentifier = (DHCP_ClientIdentifier *)&net_buffer[offset];
                 break;
             case 55: // Parameter Request List
-                options.RequestList = &net_buffer[offset];
+                options.RequestList = (DHCP_RequestList *)&net_buffer[offset];
                 break;
             }
 

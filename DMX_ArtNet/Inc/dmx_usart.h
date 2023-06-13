@@ -46,14 +46,14 @@ typedef struct {
 void USART_Init();
 void USART_InitPortDirections(char *portDirection);
 
-void USART_SetPortState(char port, char enable);
-void USART_AlterPortFlags(char port, ArtNet_Port_Flags mask, char value);
-void USART_ChangePortDirection(char port, char direction);
-void USART_SetBuffer(char port, char *buffer, short length);
-void USART_ClearBuffer(char port);
-char *USART_GetDmxBuffer(char port);
-char USART_IsInputNew(char port);
-void USART_ClearInputNew(char port);
+void USART_SetPortState(unsigned char port, char enable);
+void USART_AlterPortFlags(unsigned char port, ArtNet_Port_Flags mask, char value);
+void USART_ChangePortDirection(unsigned char port, char direction);
+void USART_SetBuffer(unsigned char port, char *buffer, short length);
+void USART_ClearBuffer(unsigned char port);
+char *USART_GetDmxBuffer(unsigned char port);
+char USART_IsInputNew(unsigned char port);
+void USART_ClearInputNew(unsigned char port);
 
 void USART_BusyCheck();
 

@@ -46,7 +46,7 @@ typedef struct {
 } ArtNet_HeaderShort;
 
 typedef struct {
-    unsigned char Signature[8];
+    char Signature[8];
     unsigned short OpCode;
     unsigned short ProtocolVersion;
 } ArtNet_Header;

@@ -6,7 +6,7 @@ Virt-Addr | Value
 */
 #define PAGE_SIZE 2048
 #define PAGE_NUM 62
-#define FLASH_OFFSET 0x08000000
+#define FLASH_OFFSET (volatile unsigned int *)0x08000000
 
 static volatile unsigned int *FlashConfigPage = FLASH_OFFSET + (PAGE_NUM * PAGE_SIZE);
 static volatile unsigned int *FlashFailoverPage = FLASH_OFFSET + ((PAGE_NUM + 1) * PAGE_SIZE);
@@ -16,8 +16,6 @@ static void EE_ClearConfigPage();
 static void EE_ClearFailoverPage();
 static void EE_UnlockFlash();
 static void EE_LockFlash();
-static void EE_BeginWrite();
-static void EE_EndWrite();
 
 static void EE_UnlockFlash() {
     while (FLASH->SR & FLASH_SR_BSY) {
@@ -112,8 +110,8 @@ void EE_WriteConfig(CONFIG *config) {
     CONFIG active = Config_GetDefault();
     EE_ReadConfig(&active);
 
-    unsigned int *srcPtr = config;
-    unsigned int *origPtr = &active;
+    unsigned int *srcPtr = (unsigned int *)config;
+    unsigned int *origPtr = (unsigned int *)&active;
 
     unsigned int changes = 0;
 
@@ -152,13 +150,13 @@ void EE_WriteConfig(CONFIG *config) {
 
 void EE_ReadFailover(char *buffer, int idx) {
     if (idx >= 0 && idx < 4) {
-        memcpy(buffer, ((char *)FlashFailoverPage) + idx * 512, 512);
+        memcpy(buffer, ((unsigned char *)FlashFailoverPage) + idx * 512, 512);
     }
 }
 
-void EE_WriteFailover(char *buffer, char art_port) {
+void EE_WriteFailover(char *buffer, unsigned char art_port) {
     char buffers[4][512];
-    memcpy(buffers, FlashFailoverPage, 4 * 512);
+    memcpy(buffers, (unsigned char *)FlashFailoverPage, 4 * 512);
     memcpy(buffers[art_port], buffer, 512);
 
     EE_UnlockFlash();
@@ -168,7 +166,7 @@ void EE_WriteFailover(char *buffer, char art_port) {
 
     for (int i = 0; i < 4; i++) {
         // change to 4 byte width
-        unsigned int *page = buffers[i];
+        unsigned int *page = (unsigned int *)buffers[i];
 
         for (int x = 0; x < 128; x += 2) {
             FlashFailoverPage[i * 128 + x] = page[x];

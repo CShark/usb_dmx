@@ -19,6 +19,8 @@ void *memcpy(void *destination, const void *source, unsigned int num) {
             cdst[i] = csrc[i];
         }
     }
+
+    return 1;
 }
 
 void memcpy_pbuf(struct pbuf *p, const void *source, unsigned int num) {
@@ -37,7 +39,7 @@ void memcpy_pbuf(struct pbuf *p, const void *source, unsigned int num) {
 
 char pbufcpy_mem(void *target, const struct pbuf *p, unsigned int maxlen) {
     unsigned int offset = 0;
-    struct pbuf *q;
+    const struct pbuf *q;
 
     for (q = p; q != NULL; q = q->next) {
         if (maxlen < q->len) {

@@ -53,9 +53,9 @@ void Config_Reset();
 void Config_ResetIp();
 void Config_SetMode(CONFIG_IP_MODE mode);
 void Config_DhcpServer(char enable, ip_addr_t host, ip_addr_t client, ip_addr_t subnet);
-void Config_SetIp(const char *ip);
-void Config_SetGateway(const char *gw);
-void Config_SetNetmask(const char *net);
+void Config_SetIp(const unsigned char *ip);
+void Config_SetGateway(const unsigned char *gw);
+void Config_SetNetmask(const unsigned char *net);
 
 CONFIG *Config_GetActive();
 void Config_ApplyNetwork();

@@ -40,15 +40,15 @@ void Config_SetMode(CONFIG_IP_MODE mode) {
     activeConfig.Mode = mode;
 }
 
-void Config_SetIp(const char *ip) {
+void Config_SetIp(const unsigned char *ip) {
     IP4_ADDR(&activeConfig.StaticIp, ip[0], ip[1], ip[2], ip[3]);
 }
 
-void Config_SetGateway(const char *gw) {
+void Config_SetGateway(const unsigned char *gw) {
     IP4_ADDR(&activeConfig.StaticGateway, gw[0], gw[1], gw[2], gw[3]);
 }
 
-void Config_SetNetmask(const char *net) {
+void Config_SetNetmask(const unsigned char *net) {
     IP4_ADDR(&activeConfig.StaticSubnet, net[0], net[1], net[2], net[3]);
 }
 

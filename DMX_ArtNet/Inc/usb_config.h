@@ -2,6 +2,7 @@
 #define __USB_CONFIG_H
 
 #include "usb.h"
+#include "platform.h"
 
 #ifndef __weak
 #define __weak __attribute__((weak))
@@ -159,15 +160,15 @@ typedef struct {
 #define USB_MaxControlData 64
 
 /// @brief Get the device descriptor
-USB_DESCRIPTOR_DEVICE *USB_GetDeviceDescriptor();
+const USB_DESCRIPTOR_DEVICE *USB_GetDeviceDescriptor();
 /// @brief Get the complete descriptor
 /// @param length A pointer which will contain the length of the descriptor
-char *USB_GetConfigDescriptor(short *length);
+unsigned char *USB_GetConfigDescriptor(short *length);
 /// @brief Get a string from the string table (str... entries)
 /// @param index The index of the string
 /// @param lcid The language code of the string
 /// @param length Will contain the length of the string
-char *USB_GetString(char index, short lcid, short *length);
+unsigned short *USB_GetString(char index, short lcid, short *length);
 /// @brief Get the OS Descriptor (String descriptor at 0xEE)
 /// @param length Will contain the length of the descriptor
 char *USB_GetOSDescriptor(short *length);
@@ -178,7 +179,7 @@ void USB_ConfigureEndpoints();
 /// @param setup The setup packet
 /// @param data A pointer to data that was sent with the setup
 /// @param length The length of the data
-char USB_HandleClassSetup(USB_SETUP_PACKET *setup, char *data, short length);
+char USB_HandleClassSetup(USB_SETUP_PACKET *setup, unsigned char *data, short length);
 
 /// @brief Called when the host triggers a SetInterface to choose an alternate id
 /// @param interface The interface id that was triggered

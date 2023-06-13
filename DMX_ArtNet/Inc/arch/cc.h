@@ -7,9 +7,6 @@
 #include <string.h>
 #include <sys/time.h>
 
-//#define BYTE_ORDER  BIG_ENDIAN
-#define BYTE_ORDER  LITTLE_ENDIAN
-
 typedef uintptr_t   mem_ptr_t;
 
 #define LWIP_ERR_T  int

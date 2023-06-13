@@ -17,7 +17,7 @@ static unsigned int artnet_timeout[4];
 
 static CONFIG *config;
 
-static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port, char art_port);
+static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port, unsigned char art_port);
 static void ArtNet_HandleIpProg(ArtNet_IpProg *p, const ip_addr_t *addr, u16_t port);
 static void ArtNet_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port);
 static void ArtNet_HandleAddress(ArtNet_Address *data, const ip_addr_t *addr, u16_t port);
@@ -67,13 +67,13 @@ static void ArtNet_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, const
 
     pbuf_free(p);
 
-    ArtNet_Header *art = net_buffer;
+    ArtNet_Header *art = (ArtNet_Header *)net_buffer;
     art->ProtocolVersion = UI16_LITTLE_ENDIAN(art->ProtocolVersion);
 
     if (strcmp(art->Signature, "Art-Net") == 0 && art->ProtocolVersion >= 14) {
         switch (art->OpCode) {
         case ArtCode_OpPoll: {
-            ArtNet_Poll *poll = net_buffer;
+            ArtNet_Poll *poll = (ArtNet_Poll *)net_buffer;
 
             if (poll->Flags & 0x20) {
                 // Targeted mode, check addresses
@@ -97,25 +97,28 @@ static void ArtNet_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, const
             }
         } break;
         case ArtCode_OpIpProg:
-            ArtNet_HandleIpProg(net_buffer, addr, port);
+            ArtNet_HandleIpProg((ArtNet_IpProg *)net_buffer, addr, port);
             break;
         case ArtCode_OpAddress:
-            ArtNet_HandleAddress(net_buffer, addr, port);
+            ArtNet_HandleAddress((ArtNet_Address *)net_buffer, addr, port);
             break;
         case ArtCode_OpDmx:
-            ArtNet_HandleOutput(net_buffer);
+            ArtNet_HandleOutput((ArtNet_Dmx *)net_buffer);
+            break;
+        case ArtCode_OpInput:
+            ArtNet_HandleInput((ArtNet_Input *)net_buffer, addr, port);
             break;
         }
     }
 }
 
-static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port, char art_port) {
+static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port, unsigned char art_port) {
     if (art_port < 0 || art_port >= 4)
         return;
 
     memclr(net_buffer, sizeof(net_buffer));
 
-    ArtNet_PollReply *reply = net_buffer;
+    ArtNet_PollReply *reply = (ArtNet_PollReply *)net_buffer;
     memcpy(reply->Header.Signature, "Art-Net", 8);
     reply->Header.OpCode = ArtCode_OpPollReply;
 
@@ -201,7 +204,7 @@ static void ArtNet_HandleIpProg(ArtNet_IpProg *data, const ip_addr_t *addr, u16_
     Config_ApplyNetwork();
 
     memclr(net_buffer, sizeof(net_buffer));
-    ArtNet_IpProgReply *reply = net_buffer;
+    ArtNet_IpProgReply *reply = (ArtNet_IpProgReply *)net_buffer;
     memcpy(reply->Header.Signature, "Art-Net", 8);
     reply->Header.OpCode = ArtCode_OpIpProgReply;
     reply->Header.ProtocolVersion = UI16_LITTLE_ENDIAN(14);
@@ -388,7 +391,7 @@ void ArtNet_InputTick(char forceTransmit) {
 
                 // Send input
                 memclr(net_buffer, sizeof(net_buffer));
-                ArtNet_Dmx *reply = net_buffer;
+                ArtNet_Dmx *reply = (ArtNet_Dmx *)net_buffer;
                 memcpy(reply->Header.Signature, "Art-Net", 8);
                 reply->Header.OpCode = ArtCode_OpDmx;
                 reply->Header.ProtocolVersion = UI16_LITTLE_ENDIAN(14);

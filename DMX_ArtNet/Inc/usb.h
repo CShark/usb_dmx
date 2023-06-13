@@ -43,16 +43,16 @@ void USB_HP_IRQHandler();
 /// @param buffer A pointer to the buffer containing the data
 /// @param length The number of bytes to sent
 /// @remark Will automatically split the transmission into multiple chunks if necessary
-void USB_Transmit(char ep, char* buffer, short length);
+void USB_Transmit(unsigned char ep, unsigned char* buffer, short length);
 /// @brief Whether there is currently any unfinished transfer running
 /// @param ep The endpoint to check
 /// @remark Do not busy-wait on this during reception. It will stall the USB-ISR
-char USB_IsTransmitPending(char ep);
+char USB_IsTransmitPending(unsigned char ep);
 /// @brief Get data out of the reception buffers
 /// @param ep The endpoint id to fetch data from
 /// @param buffer The target buffer to write to
 /// @param length The length of the buffer. Will contain the number of bytes read
-void USB_Fetch(char ep, char* buffer, short *length);
+void USB_Fetch(unsigned char ep, unsigned char* buffer, short *length);
 /// @brief Configure an endpoint
 void USB_SetEPConfig(USB_CONFIG_EP config);
 

@@ -1,7 +1,6 @@
 #include "dmx_usart.h"
 #include "platform.h"
 
-__PACKED
 static char dmx_buffer[4][513] = {{0}, {0}, {0}, {0}};
 
 USART_DmxConfig dmx_config[] = {
@@ -91,8 +90,8 @@ void USART_InitPortDirections(char *portDirection) {
     }
 }
 
-void USART_SetPortState(char port, char enable) {
-    if (port >= 0 && port < 4) {
+void USART_SetPortState(unsigned char port, char enable) {
+    if (port < 4) {
         if (dmx_config[port].State != USART_DMX_STATE_UNCONFIGURED) {
             if (dmx_config[port].State == USART_DMX_STATE_Pause && enable != 0) {
                 if (dmx_config[port].IOType & USART_OUTPUT) {
@@ -107,8 +106,8 @@ void USART_SetPortState(char port, char enable) {
     }
 }
 
-void USART_AlterPortFlags(char port, ArtNet_Port_Flags mask, char value) {
-    if (port >= 0 && port < 4) {
+void USART_AlterPortFlags(unsigned char port, ArtNet_Port_Flags mask, char value) {
+    if (port < 4) {
         if (value) {
             dmx_config[port].Flags |= mask;
         } else {
@@ -117,8 +116,8 @@ void USART_AlterPortFlags(char port, ArtNet_Port_Flags mask, char value) {
     }
 }
 
-void USART_ChangePortDirection(char port, char direction) {
-    if (port >= 0 && port < 4) {
+void USART_ChangePortDirection(unsigned char port, char direction) {
+    if (port < 4) {
         if (direction == USART_INPUT || direction == USART_OUTPUT) {
             if (dmx_config[port].IOType != direction) {
                 dmx_config[port].State = USART_DMX_STATE_Pause;
@@ -144,8 +143,8 @@ void USART_ChangePortDirection(char port, char direction) {
     }
 }
 
-void USART_SetBuffer(char port, char *buffer, short length) {
-    if (port >= 0 && port < 4) {
+void USART_SetBuffer(unsigned char port, char *buffer, short length) {
+    if (port < 4) {
         if (length <= 512) {
             for (int i = 0; i < length; i++) {
                 dmx_buffer[port][i + 1] = buffer[i];
@@ -158,30 +157,30 @@ void USART_SetBuffer(char port, char *buffer, short length) {
     }
 }
 
-void USART_ClearBuffer(char port) {
-    if (port >= 0 && port < 4) {
+void USART_ClearBuffer(unsigned char port) {
+    if (port < 4) {
         memclr(&dmx_buffer[port], 513);
     }
 }
 
-char *USART_GetDmxBuffer(char port) {
-    if (port >= 0 && port < 4) {
+char *USART_GetDmxBuffer(unsigned char port) {
+    if (port < 4) {
         return dmx_buffer[port] + 1;
     }
 
     return 0;
 }
 
-char USART_IsInputNew(char port) {
-    if (port >= 0 && port < 4) {
+char USART_IsInputNew(unsigned char port) {
+    if (port < 4) {
         return dmx_config[port].NewInput;
     }
 
     return 0;
 }
 
-void USART_ClearInputNew(char port) {
-    if (port >= 0 && port < 4) {
+void USART_ClearInputNew(unsigned char port) {
+    if (port < 4) {
         dmx_config[port].NewInput = 0;
     }
 }
@@ -194,7 +193,7 @@ static void USART_ConfigTransmit(USART_DmxConfig *dmx) {
 
     dmx->DRPort->BSRR = 1 << dmx->DRPin;
     dmx->Dma->CPAR = &(dmx->Usart->TDR);
-    dmx->Dma->CMAR = dmx->DmxBuffer;
+    dmx->Dma->CMAR = (uint32_t)dmx->DmxBuffer;
     dmx->Dma->CNDTR = 513;
     dmx->Dma->CCR = DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_TCIE | DMA_CCR_TEIE;
     dmx->DmaMux->CCR = dmx->DmaMux_TX;
@@ -295,7 +294,7 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
                 dmx->Usart->CR3 &= ~USART_CR3_DMAR;
                 dmx->Dma->CCR &= ~DMA_CCR_EN;
                 dmx->Usart->ICR |= USART_ICR_FECF;
-                dmx->BreakStatus = 1; 
+                dmx->BreakStatus = 1;
             } else if ((dmx->Usart->CR3 & USART_CR3_DMAR) == 0) {
                 // check for 0 byte
                 if (dmx->BreakStatus) {
@@ -305,7 +304,7 @@ static void USART_HandleIrqResponse(USART_DmxConfig *dmx) {
                         dmx->Dma->CNDTR = 512;
                         dmx->Dma->CCR |= DMA_CCR_EN;
                         dmx->NewInput = 1;
-                    }else{
+                    } else {
                         dmx->BreakStatus = 0;
                     }
                 }

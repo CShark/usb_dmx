@@ -1,7 +1,10 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
+#ifndef STM32G484xx
 #define STM32G484xx
+#endif
+
 #include "lwip/pbuf.h"
 #include "stm32g4xx.h"
 

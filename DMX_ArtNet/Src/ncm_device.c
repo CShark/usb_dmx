@@ -51,13 +51,13 @@ static const USB_NTB_PARAMS ntb_params = {
 
 static void NCM_TransmitNextBuffer();
 
-char NCM_SetupPacket(USB_SETUP_PACKET *setup, char *data, short length) {
+char NCM_SetupPacket(USB_SETUP_PACKET *setup, unsigned char *data, short length) {
     switch (setup->Request) {
     case NCM_GET_NTB_INPUT_SIZE: {
         if (length == 4) {
-            USB_Transmit(0, &ntbInputSize, 4);
+            USB_Transmit(0, (unsigned char *)&ntbInputSize, 4);
         } else if (length == 8) {
-            USB_Transmit(0, &ntbInputSize, 8);
+            USB_Transmit(0, (unsigned char *)&ntbInputSize, 8);
         } else {
             return USB_ERR;
         }
@@ -78,7 +78,7 @@ char NCM_SetupPacket(USB_SETUP_PACKET *setup, char *data, short length) {
         break;
     }
     case NCM_GET_NTB_PARAMETERS: {
-        USB_Transmit(0, &ntb_params, sizeof(USB_NTB_PARAMS));
+        USB_Transmit(0, (unsigned char *)&ntb_params, sizeof(USB_NTB_PARAMS));
         return USB_OK;
         break;
     }
@@ -87,7 +87,7 @@ char NCM_SetupPacket(USB_SETUP_PACKET *setup, char *data, short length) {
     return USB_ERR;
 }
 
-void NCM_HandlePacket(char ep, short length) {
+void NCM_HandlePacket(unsigned char ep, short length) {
     if (ep == 2) {
         while (rx->status == NCM_BUF_LOCKED) {
             rx = rx->next;
@@ -277,7 +277,7 @@ void NCM_FlushTx() {
     }
 }
 
-void NCM_BufferTransmitted(char ep, short length) {
+void NCM_BufferTransmitted(unsigned char ep, short length) {
     NCM_TransmitNextBuffer();
 }
 
@@ -295,7 +295,7 @@ static void NCM_TransmitNextBuffer() {
     if (tx->status == NCM_BUF_READY) {
         tx->status = NCM_BUF_LOCKED;
 
-        while(USB_IsTransmitPending(2)) {            
+        while (USB_IsTransmitPending(2)) {
         }
 
         USB_Transmit(2, tx->buffer, tx->length);
@@ -369,6 +369,6 @@ void NCM_LinkDown() {
     NCM_ControlTransmission();
 }
 
-void NCM_ControlTransmit(char ep, short length) {
+void NCM_ControlTransmit(unsigned char ep, short length) {
     NCM_ControlTransmission();
 }

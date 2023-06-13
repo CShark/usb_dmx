@@ -1,13 +1,12 @@
 #include "eth/ncm_netif.h"
 #include "ncm_device.h"
 
-#include <netif/ethernet.h>
-#include <lwip/etharp.h>
 #include "platform.h"
 #include "profiling.h"
-//#include <lwip/apps/dhcp_server.h>
+#include <lwip/etharp.h>
+#include <netif/ethernet.h>
+// #include <lwip/apps/dhcp_server.h>
 
-static struct netif netif;
 static const short hwaddr[6] = {0x12, 0x54, 0xF9, 0xD9, 0x1F, 0x18};
 
 static err_t ncm_netif_output(struct netif *netif, struct pbuf *p) {
@@ -15,14 +14,16 @@ static err_t ncm_netif_output(struct netif *netif, struct pbuf *p) {
     short offset = 0;
     char *buffer = NCM_GetNextTxDatagramBuffer(p->tot_len);
 
-    for(q = p; q != NULL; q = q->next) {
+    for (q = p; q != NULL; q = q->next) {
         memcpy(buffer + offset, q->payload, q->len);
         offset += q->len;
 
-        if(q->len == q->tot_len) {
+        if (q->len == q->tot_len) {
             break;
         }
     }
+
+    return ERR_OK;
 }
 
 void ncm_netif_poll(struct netif *netif) {
@@ -33,16 +34,16 @@ void ncm_netif_poll(struct netif *netif) {
 
     datagram = NCM_GetNextRxDatagramBuffer(&length);
 
-    if(datagram != 0 && length > 0) {
+    if (datagram != 0 && length > 0) {
         p = pbuf_alloc(PBUF_RAW, length, PBUF_POOL);
 
-        if(p != NULL) {
-            for(q = p; q != NULL && offset < length; q = q->next) {
+        if (p != NULL) {
+            for (q = p; q != NULL && offset < length; q = q->next) {
                 memcpy(q->payload, datagram + offset, q->len);
                 offset += q->len;
             }
 
-            if(netif->input(p, netif) != ERR_OK) {
+            if (netif->input(p, netif) != ERR_OK) {
                 pbuf_free(p);
             }
         }

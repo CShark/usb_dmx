@@ -1,7 +1,6 @@
 #include "usb_config.h"
 #include "cdc_device.h"
 #include "ncm_device.h"
-#include "platform.h"
 
 // Example definition for a NCM-Device
 static const USB_DESCRIPTOR_DEVICE DeviceDescriptor = {
@@ -190,28 +189,29 @@ static const USB_DESCRIPTOR_ENDPOINT CDCEndpoints[3] = {
      .Interval = 0}};
 
 // Buffer holding the complete descriptor (except the device one) in the correct order
-static char ConfigurationBuffer[155] = {0};
+static unsigned char ConfigurationBuffer[155] = {0};
 
 /// @brief A Helper to add a descriptor to the configuration buffer
 /// @param data The raw descriptor data
 /// @param offset The offset in the configuration buffer
-static void AddToDescriptor(char *data, short *offset);
+static void AddToDescriptor(const void *data, short *offset);
 
-USB_DESCRIPTOR_DEVICE *USB_GetDeviceDescriptor() {
+const USB_DESCRIPTOR_DEVICE *USB_GetDeviceDescriptor() {
     return &DeviceDescriptor;
 }
 
-static void AddToDescriptor(char *data, short *offset) {
-    short length = data[0];
+static void AddToDescriptor(const void *data, short *offset) {
+    uint8_t *arr = (uint8_t *)data;
+    short length = arr[0];
 
     for (int i = 0; i < length; i++) {
-        ConfigurationBuffer[i + *offset] = data[i];
+        ConfigurationBuffer[i + *offset] = arr[i];
     }
 
     *offset += length;
 }
 
-char *USB_GetConfigDescriptor(short *length) {
+unsigned char *USB_GetConfigDescriptor(short *length) {
     if (ConfigurationBuffer[0] == 0) {
         short offset = 0;
         AddToDescriptor(&ConfigDescriptor, &offset);
@@ -243,7 +243,7 @@ char *USB_GetConfigDescriptor(short *length) {
     return ConfigurationBuffer;
 }
 
-char *USB_GetString(char index, short lcid, short *length) {
+unsigned short *USB_GetString(char index, short lcid, short *length) {
     // Strings need to be in unicode (thus prefixed with u"...")
     // The length is double the character count + 2 — or use VSCode which will show the number of bytes on hover
     if (index == 1) {
@@ -309,13 +309,15 @@ void USB_ConfigureEndpoints() {
     USB_SetEPConfig(CDCDataEp);
 }
 
-char USB_HandleClassSetup(USB_SETUP_PACKET *setup, char *data, short length) {
+char USB_HandleClassSetup(USB_SETUP_PACKET *setup, unsigned char *data, short length) {
     // Route the setup packets based on the Interface / Class Index
     if (setup->Index == 0) {
         NCM_SetupPacket(setup, data, length);
     } else if (setup->Index == 2) {
         CDC_SetupPacket(setup, data, length);
     }
+
+    return USB_OK;
 }
 
 void USB_ResetClass(char interface, char alternateId) {

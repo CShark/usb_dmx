@@ -3,13 +3,12 @@
 #include "dmx_usart.h"
 #include "platform.h"
 
-static char buffer[64];
-static char lineCoding[7];
+static unsigned char buffer[64];
+static unsigned char lineCoding[7];
 
 static void CDC_SendID();
-static void CDC_ResetConfig();
 
-char CDC_SetupPacket(USB_SETUP_PACKET *setup, char *data, short length) {
+char CDC_SetupPacket(USB_SETUP_PACKET *setup, unsigned char *data, short length) {
     // Windows requires us to remember the line coding
     switch (setup->Request) {
     case CDC_CONFIG_CONTROLLINESTATE:
@@ -34,7 +33,7 @@ char CDC_SetupPacket(USB_SETUP_PACKET *setup, char *data, short length) {
     return USB_ERR;
 }
 
-void CDC_HandlePacket(char ep, short length) {
+void CDC_HandlePacket(unsigned char ep, short length) {
     USB_Fetch(ep, buffer, &length);
 
     switch (buffer[0]) {
@@ -66,7 +65,7 @@ void CDC_HandlePacket(char ep, short length) {
         break;
 
     case 0xB0:
-        CDC_TransmitData(&Config_GetActive()->Mode, 1);
+        CDC_TransmitData((char *)&Config_GetActive()->Mode, 1);
         break;
     case 0xB1: {
         char data[1 + 4 * 3];
@@ -106,8 +105,8 @@ void CDC_HandlePacket(char ep, short length) {
 
     case 0xD0:
         if (length == 2 && buffer[1] >= 0 && buffer[1] < 4) {
-            char *buffer = USART_GetDmxBuffer(buffer[1]);
-            CDC_TransmitData(buffer, 512);
+            char *txBuffer = USART_GetDmxBuffer(buffer[1]);
+            CDC_TransmitData(txBuffer, 512);
         }
         break;
     }
@@ -117,7 +116,7 @@ static void CDC_SendID() {
     USB_Transmit(4, UID->ID, sizeof(UID->ID));
 }
 
-void CDC_TransmitData(char *data, int len) {
+void CDC_TransmitData(unsigned char *data, int len) {
     while (USB_IsTransmitPending(4)) {
     }
 
