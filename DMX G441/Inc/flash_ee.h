@@ -7,5 +7,5 @@
 void EE_ReadConfig(CONFIG *ptr);
 void EE_WriteConfig(CONFIG *config);
 void EE_ReadFailover(char* buffer, int idx);
-void EE_WriteFailover(char **buffers);
+void EE_WriteFailover(char *buffer, char art_port);
 #endif

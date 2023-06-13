@@ -168,13 +168,18 @@ char *USART_GetDmxBuffer(char port) {
     if (port >= 0 && port < 4) {
         return dmx_buffer[port] + 1;
     }
+
+    return 0;
 }
 
 char USART_IsInputNew(char port) {
     if (port >= 0 && port < 4) {
         return dmx_config[port].NewInput;
     }
+
+    return 0;
 }
+
 void USART_ClearInputNew(char port) {
     if (port >= 0 && port < 4) {
         dmx_config[port].NewInput = 0;

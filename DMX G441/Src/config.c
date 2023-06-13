@@ -89,8 +89,8 @@ void Config_Store() {
     EE_WriteConfig(&activeConfig);
 }
 
-void Config_StoreFailsafeScene(char **buffer) {
-    EE_WriteFailover(buffer);
+void Config_StoreFailsafeScene(char *buffer, char art_port) {
+    EE_WriteFailover(buffer, art_port);
 }
 void Config_LoadFailsafeScene(char *target, int index) {
     EE_ReadFailover(target, index);
@@ -108,23 +108,22 @@ CONFIG Config_GetDefault() {
     IP4_ADDR(&cfg.StaticGateway, 192, 168, 10, 1);
     IP4_ADDR(&cfg.StaticSubnet, 255, 255, 255, 0);
 
-    memcpy(&cfg.ArtNetShortName, "ArtNet-Node", 12);
-    memcpy(&cfg.ArtNetLongName, "Custom Art-Net Node", 20);
-
-    cfg.ArtNetNetwork = ARTNET_NET;
-    cfg.ArtNetSubnet = ARTNET_SUB;
-
     for (int i = 0; i < 4; i++) {
-        cfg.ArtNetUniverse[i] = ARTNET_UNI + i;
-        cfg.ArtNetUniverse[i + 4] = ARTNET_UNI + i;
+        sprintf(cfg.ArtNet[i].ShortName, "ArtNet-Port %i", i);
+        sprintf(cfg.ArtNet[i].LongName, "Custom Art-Net Node");
 
-        cfg.ArtNetPortFlags[i] = 0;
+        cfg.ArtNet[i].Network = ARTNET_NET;
+        cfg.ArtNet[i].Subnet = ARTNET_SUB;
+
+        cfg.ArtNet[i].Universe = ARTNET_UNI + i;
+
+        cfg.ArtNet[i].PortFlags = 0;
+
+        cfg.ArtNet[i].FailoverMode = ArtFail_Hold;
+        cfg.ArtNet[i].PortDirection = 0x00;
+
+        cfg.ArtNet[i].AcnPriority = 100;
     }
-
-    cfg.ArtNetFailoverMode = ArtFail_Hold;
-    cfg.ArtNetPortDirection = 0x00;
-
-    cfg.AcnPriority = 100;
 
     return cfg;
 }

@@ -15,6 +15,21 @@ typedef enum {
     CONFIGIP_DHCP = 2
 } CONFIG_IP_MODE;
 
+
+typedef struct {
+    char ShortName[18];
+    char LongName[64];
+
+    char Network;
+    char Subnet;
+    char Universe;
+
+    char PortDirection; // First Bit = enable override, second bit (1 = Input, 0 = Output)
+    ArtNet_Port_Flags PortFlags;
+    ArtNet_Failover FailoverMode;
+    char AcnPriority;
+} ARTNET_CONFIG;
+
 typedef struct {
     ip_addr_t DhcpServerSelf;
     ip_addr_t DhcpServerClient;
@@ -27,17 +42,7 @@ typedef struct {
     CONFIG_IP_MODE Mode;
     char DhcpServerEnable;
 
-    char ArtNetShortName[18];
-    char ArtNetLongName[64];
-    char ArtNetNetwork;
-    char ArtNetSubnet;
-    char ArtNetUniverse[8];
-    ArtNet_Port_Flags ArtNetPortFlags[4];
-
-    ArtNet_Failover ArtNetFailoverMode;
-    char ArtNetPortDirection; // 00 | 00 | 00 | 00 -> First bit = enable override, Second = Input (1) or Output (0)
-
-    char AcnPriority;
+    ARTNET_CONFIG ArtNet[4];
 } CONFIG;
 #pragma pack()
 
@@ -56,7 +61,7 @@ CONFIG *Config_GetActive();
 void Config_ApplyNetwork();
 void Config_Store();
 
-void Config_StoreFailsafeScene(char **buffer);
+void Config_StoreFailsafeScene(char *buffer, char art_port);
 void Config_LoadFailsafeScene(char* target, int index);
 
 CONFIG Config_GetDefault();

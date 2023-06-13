@@ -17,7 +17,7 @@ static unsigned int artnet_timeout[4];
 
 static CONFIG *config;
 
-static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port);
+static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port, char art_port);
 static void ArtNet_HandleIpProg(ArtNet_IpProg *p, const ip_addr_t *addr, u16_t port);
 static void ArtNet_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port);
 static void ArtNet_HandleAddress(ArtNet_Address *data, const ip_addr_t *addr, u16_t port);
@@ -39,23 +39,21 @@ void ArtNet_Init(struct netif *netif, char *portConfig) {
     memcpy(artnet_portConfig, portConfig, 4);
 
     for (int i = 0; i < 4; i++) {
-        if (config->ArtNetPortDirection & (1 << (i * 2))) {
-            if (config->ArtNetPortDirection & (1 << (i * 2 + 1))) {
-                artnet_portConfig[i] = USART_INPUT;
-            } else {
-                artnet_portConfig[i] = USART_OUTPUT;
-            }
+        if (config->ArtNet[i].PortDirection == 0x03) {
+            artnet_portConfig[i] = USART_INPUT;
+        } else if (config->ArtNet[i].PortDirection == 0x01) {
+            artnet_portConfig[i] = USART_OUTPUT;
         }
     }
 
     USART_InitPortDirections(artnet_portConfig);
 
     for (int i = 0; i < 4; i++) {
-        if (config->ArtNetPortFlags[i] & PORT_FLAG_RDM) {
+        if (config->ArtNet[i].PortFlags & PORT_FLAG_RDM) {
             USART_AlterPortFlags(i, PORT_FLAG_RDM, 1);
         }
 
-        if (config->ArtNetPortFlags[i] & PORT_FLAG_SINGLE) {
+        if (config->ArtNet[i].PortFlags & PORT_FLAG_SINGLE) {
             USART_AlterPortFlags(i, PORT_FLAG_SINGLE, 1);
         }
     }
@@ -79,30 +77,23 @@ static void ArtNet_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, const
 
             if (poll->Flags & 0x20) {
                 // Targeted mode, check addresses
-                short base = (config->ArtNetNetwork & 0x7F) << 8;
-                base += (config->ArtNetSubnet & 0x0F) << 4;
-
                 for (int i = 0; i < 4; i++) {
-                    if (artnet_portConfig[i] & USART_OUTPUT) {
-                        short address = base + config->ArtNetUniverse[i];
+                    short base = (config->ArtNet[i].Network & 0x7F) << 8;
+                    base += (config->ArtNet[i].Subnet & 0x0F) << 4;
+
+                    for (int i = 0; i < 4; i++) {
+                        short address = base + config->ArtNet[i].Universe;
 
                         if (poll->TargetPort[0] <= address && poll->TargetPort[1] >= address) {
-                            ArtNet_SendPollReply(addr, port);
-                            break;
-                        }
-                    }
-
-                    if (artnet_portConfig[i] & USART_INPUT) {
-                        short address = base + config->ArtNetUniverse[i + 4];
-
-                        if (poll->TargetPort[0] <= address && poll->TargetPort[1] >= address) {
-                            ArtNet_SendPollReply(addr, port);
+                            ArtNet_SendPollReply(addr, port, i);
                             break;
                         }
                     }
                 }
             } else {
-                ArtNet_SendPollReply(addr, port);
+                for (int i = 0; i < 4; i++) {
+                    ArtNet_SendPollReply(addr, port, i);
+                }
             }
         } break;
         case ArtCode_OpIpProg:
@@ -118,7 +109,10 @@ static void ArtNet_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, const
     }
 }
 
-static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port) {
+static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port, char art_port) {
+    if (art_port < 0 || art_port >= 4)
+        return;
+
     memclr(net_buffer, sizeof(net_buffer));
 
     ArtNet_PollReply *reply = net_buffer;
@@ -139,28 +133,26 @@ static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port) {
     reply->VersInfo = UI16_LITTLE_ENDIAN(ARTNET_FIRMWAREV);
     reply->OEM = 0xFFFF;
 
-    reply->NetSwitch = config->ArtNetNetwork;
-    reply->SubSwitch = config->ArtNetSubnet;
+    reply->NetSwitch = config->ArtNet[art_port].Network;
+    reply->SubSwitch = config->ArtNet[art_port].Subnet;
 
-    reply->NumPorts = UI16_LITTLE_ENDIAN(4);
-    for (int i = 0; i < 4; i++) {
-        reply->PortTypes[i] = artnet_portConfig[i] << 6;
-        reply->SwOut[i] = config->ArtNetUniverse[i];
-        reply->SwIn[i] = config->ArtNetUniverse[i + 4];
+    reply->NumPorts = UI16_LITTLE_ENDIAN(1);
+    reply->PortTypes[0] = artnet_portConfig[art_port] << 6;
+    reply->SwOut[0] = config->ArtNet[art_port].Universe;
+    reply->SwOut[0] = config->ArtNet[art_port].Universe;
+
+    reply->BindIndex = art_port;
+
+    if (config->ArtNet[art_port].PortFlags & PORT_FLAG_INDISABLED) {
+        reply->GoodInput[0] = 1 << 3;
     }
 
-    for (int i = 0; i < 4; i++) {
-        if (config->ArtNetPortFlags[i] & PORT_FLAG_INDISABLED) {
-            reply->GoodInput[i] = 1 << 3;
-        }
+    if ((config->ArtNet[art_port].PortFlags & PORT_FLAG_RDM) == 0) {
+        reply->GoodOutputB[0] |= (1 << 7);
+    }
 
-        if ((config->ArtNetPortFlags[i] & PORT_FLAG_RDM) == 0) {
-            reply->GoodOutputB[i] |= (1 << 7);
-        }
-
-        if ((config->ArtNetPortFlags[i] & PORT_FLAG_SINGLE) == 0) {
-            reply->GoodOutputB[i] |= (1 << 6);
-        }
+    if ((config->ArtNet[art_port].PortFlags & PORT_FLAG_SINGLE) == 0) {
+        reply->GoodOutputB[0] |= (1 << 6);
     }
 
     reply->Status1 = 0x20;
@@ -169,15 +161,12 @@ static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port) {
         reply->Status2 |= (1 << 1);
     }
     reply->Status3 = (1 << 3) | (1 << 5);
-    reply->Status3 |= (config->ArtNetFailoverMode << 6);
+    reply->Status3 |= (config->ArtNet[art_port].FailoverMode << 6);
 
-    reply->AcnPriority = config->AcnPriority;
+    reply->AcnPriority = config->ArtNet[art_port].AcnPriority;
 
-    memcpy(reply->ShortName, config->ArtNetShortName, 18);
-    memcpy(reply->LongName, config->ArtNetLongName, 64);
-
-    memcpy(reply->NodeReport, "ID:", 3);
-    memcpy(reply->NodeReport + 3, UID->ID, sizeof(UID->ID));
+    memcpy(reply->ShortName, config->ArtNet[art_port].ShortName, 18);
+    memcpy(reply->LongName, config->ArtNet[art_port].LongName, 64);
 
     struct pbuf *p;
     p = pbuf_alloc(PBUF_TRANSPORT, sizeof(ArtNet_PollReply), PBUF_POOL);
@@ -241,121 +230,115 @@ static void ArtNet_HandleIpProg(ArtNet_IpProg *data, const ip_addr_t *addr, u16_
 }
 
 static void ArtNet_HandleAddress(ArtNet_Address *data, const ip_addr_t *addr, u16_t port) {
+    if (data->BindIndex < 0 || data->BindIndex >= 4)
+        return;
+
     if (data->NetSwitch == 0) {
-        config->ArtNetNetwork = ARTNET_NET;
+        config->ArtNet[data->BindIndex].Network = ARTNET_NET;
     } else if (data->NetSwitch & 0x80) {
-        config->ArtNetNetwork = data->NetSwitch & ~0x80;
+        config->ArtNet[data->BindIndex].Network = data->NetSwitch & ~0x80;
     }
 
     if (data->ShortName[0] != 0) {
-        memcpy(config->ArtNetShortName, data->ShortName, 18);
+        memcpy(config->ArtNet[data->BindIndex].ShortName, data->ShortName, 18);
     }
 
     if (data->LongName[0] != 0) {
-        memcpy(config->ArtNetLongName, data->LongName, 64);
+        memcpy(config->ArtNet[data->BindIndex].LongName, data->LongName, 64);
     }
 
     if (data->SubSwitch == 0) {
-        config->ArtNetSubnet = ARTNET_SUB;
+        config->ArtNet[data->BindIndex].Subnet = ARTNET_SUB;
     } else if (data->SubSwitch & 0x80) {
-        config->ArtNetSubnet = data->SubSwitch & ~0x80;
+        config->ArtNet[data->BindIndex].Subnet = data->SubSwitch & ~0x80;
     }
 
     if (data->AcnPriority >= 0 && data->AcnPriority < 200) {
-        config->AcnPriority = data->AcnPriority;
-    }
-
-    for (int i = 0; i < 4; i++) {
-        if (data->SwOut[i] & 0x80) {
-            config->ArtNetUniverse[i] = data->SwOut[i] & ~0x80;
-        } else if (data->SwOut[i] == 0) {
-            config->ArtNetUniverse[i] = ARTNET_UNI + i;
-        }
-
-        if (data->SwIn[i] & 0x80) {
-            config->ArtNetUniverse[i + 4] = data->SwIn[i] & ~0x80;
-        } else if (data->SwIn[i] == 0) {
-            config->ArtNetUniverse[i + 4] = ARTNET_UNI + i;
-        }
+        config->ArtNet[data->BindIndex].AcnPriority = data->AcnPriority;
     }
 
     char idx = data->Command & 0x0F;
     char cmd = data->Command & 0xF0;
-    if (cmd > 0 && idx >= 0 && idx < 4) {
+    if (cmd > 0 && idx == 0) {
         switch (cmd) {
         case 0x90:
-            USART_ClearBuffer(idx);
+            USART_ClearBuffer(data->BindIndex);
             break;
-
         case 0xA0:
             USART_AlterPortFlags(idx, PORT_FLAG_SINGLE, 1);
-            config->ArtNetPortFlags[idx] |= PORT_FLAG_SINGLE;
+            config->ArtNet[data->BindIndex].PortFlags |= PORT_FLAG_SINGLE;
             break;
         case 0xB0:
             USART_AlterPortFlags(idx, PORT_FLAG_SINGLE, 0);
-            config->ArtNetPortFlags[idx] &= ~PORT_FLAG_SINGLE;
+            config->ArtNet[data->BindIndex].PortFlags &= ~PORT_FLAG_SINGLE;
             break;
         case 0xC0:
             USART_AlterPortFlags(idx, PORT_FLAG_RDM, 1);
-            config->ArtNetPortFlags[idx] |= PORT_FLAG_RDM;
+            config->ArtNet[data->BindIndex].PortFlags |= PORT_FLAG_RDM;
             break;
         case 0xD0:
             USART_AlterPortFlags(idx, PORT_FLAG_RDM, 0);
-            config->ArtNetPortFlags[idx] &= ~PORT_FLAG_RDM;
+            config->ArtNet[data->BindIndex].PortFlags &= ~PORT_FLAG_RDM;
             break;
 
         case 0x20: // Output
-            config->ArtNetPortDirection = (config->ArtNetPortDirection & ~(0x03 << (idx * 2))) | (0x01 << (idx * 2));
-            USART_ChangePortDirection(idx, USART_OUTPUT);
-            artnet_portConfig[idx] = USART_OUTPUT;
+            config->ArtNet[data->BindIndex].PortDirection = 0x01;
+            USART_ChangePortDirection(data->BindIndex, USART_OUTPUT);
+            artnet_portConfig[data->BindIndex] = USART_OUTPUT;
             break;
         case 0x30: // Input
-            config->ArtNetPortDirection = (config->ArtNetPortDirection & ~(0x03 << (idx * 2))) | (0x03 << (idx * 2));
-            USART_ChangePortDirection(idx, USART_INPUT);
-            artnet_portConfig[idx] = USART_INPUT;
+            config->ArtNet[data->BindIndex].PortDirection = 0x03;
+            USART_ChangePortDirection(data->BindIndex, USART_INPUT);
+            artnet_portConfig[data->BindIndex] = USART_INPUT;
             break;
         }
     } else {
         switch (data->Command) {
             // Failover mode
         case 0x08:
-            config->ArtNetFailoverMode = ArtFail_Hold;
+            config->ArtNet[data->BindIndex].FailoverMode = ArtFail_Hold;
             break;
         case 0x09:
-            config->ArtNetFailoverMode = ArtFail_Zero;
+            config->ArtNet[data->BindIndex].FailoverMode = ArtFail_Zero;
             break;
         case 0x0A:
-            config->ArtNetFailoverMode = ArtFail_Full;
+            config->ArtNet[data->BindIndex].FailoverMode = ArtFail_Full;
             break;
         case 0x0B:
-            config->ArtNetFailoverMode = ArtFail_Scene;
+            config->ArtNet[data->BindIndex].FailoverMode = ArtFail_Scene;
             break;
-        case 0x0C: {
-            char *buffers[4] = {
-                USART_GetDmxBuffer(0),
-                USART_GetDmxBuffer(1),
-                USART_GetDmxBuffer(2),
-                USART_GetDmxBuffer(3)};
+        case 0x0C:
+            Config_StoreFailsafeScene(USART_GetDmxBuffer(data->BindIndex), data->BindIndex);
+            break;
+        }
+    }
 
-            Config_StoreFailsafeScene(buffers);
-        } break;
+    if (artnet_portConfig[data->BindIndex] == USART_OUTPUT) {
+        if (data->SwOut[0] & 0x80) {
+            config->ArtNet[data->BindIndex].Universe = data->SwOut[0] & ~0x80;
+        } else if (data->SwOut[0] == 0) {
+            config->ArtNet[data->BindIndex].Universe = ARTNET_UNI + data->BindIndex;
+        }
+    } else {
+        if (data->SwIn[0] & 0x80) {
+            config->ArtNet[data->BindIndex].Universe = data->SwIn[0] & ~0x80;
+        } else if (data->SwIn[0] == 0) {
+            config->ArtNet[data->BindIndex].Universe = ARTNET_UNI + data->BindIndex;
         }
     }
 
     Config_Store();
-    ArtNet_SendPollReply(addr, port);
+    ArtNet_SendPollReply(addr, port, data->BindIndex);
 }
 
 static void ArtNet_HandleInput(ArtNet_Input *data, const ip_addr_t *addr, u16_t port) {
-    for (int i = 0; i < 4; i++) {
-        if (data->Input[i] & 0x01) {
-            config->ArtNetPortFlags[i] |= PORT_FLAG_INDISABLED;
-        } else {
-            config->ArtNetPortFlags[i] &= ~PORT_FLAG_INDISABLED;
-        }
+    if (data->Input[data->BindIndex] & 0x01) {
+        config->ArtNet[data->BindIndex].PortFlags |= PORT_FLAG_INDISABLED;
+    } else {
+        config->ArtNet[data->BindIndex].PortFlags &= ~PORT_FLAG_INDISABLED;
     }
 
-    ArtNet_SendPollReply(addr, port);
+    ArtNet_SendPollReply(addr, port, data->BindIndex);
 }
 
 static void ArtNet_HandleOutput(ArtNet_Dmx *data) {
@@ -365,25 +348,12 @@ static void ArtNet_HandleOutput(ArtNet_Dmx *data) {
     char uni = (data->SubUni & 0x0F);
 
     if (data->Length <= 512) {
-        if (config->ArtNetSubnet == sub && config->ArtNetNetwork == net) {
-            if (uni == config->ArtNetUniverse[0]) {
-                USART_SetBuffer(0, data->Data, data->Length);
-                artnet_timeout[0] = sys_now();
-            }
-
-            if (uni == config->ArtNetUniverse[1]) {
-                USART_SetBuffer(1, data->Data, data->Length);
-                artnet_timeout[1] = sys_now();
-            }
-
-            if (uni == config->ArtNetUniverse[2]) {
-                USART_SetBuffer(2, data->Data, data->Length);
-                artnet_timeout[2] = sys_now();
-            }
-
-            if (uni == config->ArtNetUniverse[3]) {
-                USART_SetBuffer(3, data->Data, data->Length);
-                artnet_timeout[3] = sys_now();
+        for (int i = 0; i < 4; i++) {
+            if (config->ArtNet[i].Subnet == sub && config->ArtNet[i].Network == net) {
+                if (uni == config->ArtNet[i].Universe) {
+                    USART_SetBuffer(i, data->Data, data->Length);
+                    artnet_timeout[i] = sys_now();
+                }
             }
         }
     }
@@ -391,7 +361,7 @@ static void ArtNet_HandleOutput(ArtNet_Dmx *data) {
 
 static void ArtNet_ApplyFailover(int idx) {
     if (idx >= 0 && idx < 4) {
-        switch (config->ArtNetFailoverMode) {
+        switch (config->ArtNet[idx].FailoverMode) {
         case ArtFail_Hold:
             break;
         case ArtFail_Zero:
@@ -412,7 +382,7 @@ static void ArtNet_ApplyFailover(int idx) {
 
 void ArtNet_InputTick(char forceTransmit) {
     for (int i = 0; i < 4; i++) {
-        if ((artnet_portConfig[i] & USART_INPUT) && ((config->ArtNetPortFlags[i] & PORT_FLAG_INDISABLED) == 0)) {
+        if ((artnet_portConfig[i] & USART_INPUT) && ((config->ArtNet[i].PortFlags & PORT_FLAG_INDISABLED) == 0)) {
             if (USART_IsInputNew(i) || forceTransmit) {
                 USART_ClearInputNew(i);
 
@@ -423,8 +393,8 @@ void ArtNet_InputTick(char forceTransmit) {
                 reply->Header.OpCode = ArtCode_OpDmx;
                 reply->Header.ProtocolVersion = UI16_LITTLE_ENDIAN(14);
 
-                reply->Net = config->ArtNetNetwork & 0x7F;
-                reply->SubUni = ((config->ArtNetSubnet & 0x0F) << 4) | (config->ArtNetUniverse[i] & 0x0F);
+                reply->Net = config->ArtNet[i].Network & 0x7F;
+                reply->SubUni = ((config->ArtNet[i].Subnet & 0x0F) << 4) | (config->ArtNet[i].Universe & 0x0F);
                 reply->Length = UI16_LITTLE_ENDIAN(512);
 
                 char *buffer = USART_GetDmxBuffer(i);

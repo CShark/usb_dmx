@@ -38,7 +38,7 @@ typedef enum {
     PORT_FLAG_INDISABLED = 0x04,
 } ArtNet_Port_Flags;
 
-#pragma pack(1);
+#pragma pack(1)
 
 typedef struct {
     unsigned char Signature[8];
@@ -146,7 +146,7 @@ typedef struct {
     unsigned short NumPorts;
     unsigned char Input[4];
 } ArtNet_Input;
-#pragma pack();
+#pragma pack()
 
 void ArtNet_Init(struct netif *netif, char* portConfig);
 void ArtNet_InputTick(char forceTransmit);

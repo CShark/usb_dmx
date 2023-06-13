@@ -156,7 +156,11 @@ void EE_ReadFailover(char *buffer, int idx) {
     }
 }
 
-void EE_WriteFailover(char **buffers) {
+void EE_WriteFailover(char *buffer, char art_port) {
+    char buffers[4][512];
+    memcpy(buffers, FlashFailoverPage, 4 * 512);
+    memcpy(buffers[art_port], buffer, 512);
+
     EE_UnlockFlash();
     EE_ClearFailoverPage();
 
