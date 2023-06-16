@@ -1,0 +1,120 @@
+<html>
+
+<head>
+	<title>DMX-ArtNET</title>
+	<link rel="stylesheet" type="text/css" href="style.css" />
+	<script>
+		window.onload = async () => {
+			var obj = document.getElementById("template");
+
+			for (i = 1; i < 4; i++) {
+				var clone = obj.cloneNode(true);
+				clone.id = "";
+				clone.getElementsByTagName("h3")[0].textContent += (i + 1);
+				for (elem of clone.querySelectorAll("input, textarea")) {
+					if (elem.name != "portId")
+						elem.name += i;
+					else
+						elem.value = i;
+				}
+				document.getElementById("submit").before(clone);
+			}
+
+			obj.getElementsByTagName("h3")[0].textContent += "1";
+			for (elem of obj.querySelectorAll("input, textarea")) {
+				if (elem.name != "portId")
+					elem.name += "0";
+				else
+					elem.value = 0;
+			}
+
+			for (i = 0; i < 4; i++) {
+				var result = await fetch("/config" + i);
+				var buf = await result.arrayBuffer();
+				var decoder = new TextDecoder('iso-8859-1');
+				var txt = decoder.decode(buf);
+				var obj = txt.split('\n').reduce(function (result, item) { result[item.split(':')[0]] = item.split(':')[1]; return result; }, {});
+
+				for (const [key, value] of Object.entries(obj)) {
+					var elem = document.getElementsByName(key + i)[0];
+					if (elem.type == 'checkbox') {
+						elem.checked = value == "1" ? 1 : 0;
+					} else if (elem.type == 'radio') {
+						elem = document.querySelector(`input[name='${key + i}'][value='${value}']`);
+						elem.checked = 1;
+					} else {
+						elem.value = value;
+					}
+				}
+			}
+		}
+	</script>
+</head>
+
+<body>
+	<h1>DMX-ArtNET Device</h1>
+
+	<div>
+		<nav>
+			<a href="/">Port Config</a>
+			<a href="/device.html">Device Config</a>
+		</nav>
+
+		<form class="container" action="/set-config" method="post">
+			<div id="template">
+				<h3>Port </h3>
+				<div class="auto-grid">
+					Output
+					<label class="slider"><input type="checkbox" name="output" value="1"><span></span></label>
+					Input
+				</div>
+
+				<label>Universum <input type="number" min="0" max="32767" name="universe"></label>
+
+				<label>Name <input type="text" maxlength="18" name="name"></label>
+
+				<label>Description <textarea rows="4" maxlength="64" name="description"></textarea></label>
+
+				<label>ACN Priority <input type="number" min="0" max="255" name="acn"></label>
+
+				<div class="auto-grid">
+					Disable Input
+					<label class="slider"><input type="checkbox" name="inputdisable" value="1"><span></span></label>
+				</div>
+
+				<div class="auto-grid">
+					RDM
+					<label class="slider"><input type="checkbox" name="rdm" value="1"><span></span></label>
+				</div>
+
+				<div class="auto-grid">
+					Continuous
+					<label class="slider"><input type="checkbox" name="delta" value="1"><span></span></label>
+					Delta
+				</div>
+
+				<fieldset>
+					<legend>Failover Mode</legend>
+
+					<label class="radio"><input type="radio" value="0" name="failover"> Hold</label>
+					<label class="radio"><input type="radio" value="1" name="failover"> Zero</label>
+					<label class="radio"><input type="radio" value="2" name="failover"> Full</label>
+					<label class="radio"><input type="radio" value="3" name="failover"> Scene</label>
+				</fieldset>
+
+				<div class="auto-grid">
+					Record Failover
+					<label class="slider"><input type="checkbox" name="recFailover" value="1" form="recordFailover"><span></span></label>
+				</div>
+			</div>
+
+			<input id="submit" type="submit" value="Record Selected Failover Scenes" form="recordFailover">
+			<input type="submit" value="Apply Settings">
+		</form>
+	</div>
+
+	<form action="/record-failover" method="post" id="recordFailover" hidden>
+	</form>
+</body>
+
+</html>

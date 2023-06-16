@@ -1,0 +1,107 @@
+<html>
+
+<head>
+    <title>DMX-ArtNET</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <script>
+        window.onload = async () => {
+            for (elem of document.querySelectorAll("input[type='ip']")) {
+                elem.type = "text";
+                elem.minLength = 7;
+                elem.maxLength = 15;
+                elem.size = 15;
+                elem.pattern = "((^|\\.)((25[0-5])|(2[0-4]\\d)|(1\\d\\d)|([1-9]?\\d))){4}$";
+                elem.title = "IP Address";
+                elem.required = true;
+            }
+
+            var result = await fetch("/ipconfig");
+            var buf = await result.arrayBuffer();
+            var decoder = new TextDecoder('iso-8859-1');
+            var txt = decoder.decode(buf);
+            var obj = txt.split('\n').reduce(function (result, item) { result[item.split(':')[0]] = item.split(':')[1]; return result; }, {});
+
+            for (const [key, value] of Object.entries(obj)) {
+                var elem = document.getElementsByName(key)[0];
+                if (elem.type == 'checkbox') {
+                    elem.checked = value;
+                } else if (elem.type == 'radio') {
+                    elem = document.querySelector(`input[name='${key}'][value='${value}']`);
+                    elem.checked = 1;
+                } else {
+                    elem.value = value;
+                }
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <h1>DMX-ArtNET Device</h1>
+
+    <div>
+        <nav>
+            <a href="/">Port Config</a>
+            <a href="/device.html">Device Config</a>
+        </nav>
+
+        <form class="container" action="/ip-config" method="post">
+            <h3 style="grid-column: 1 / span 4">Device</h3>
+            <div>
+                <fieldset>
+                    <legend>IP Mode</legend>
+
+                    <label class="radio"><input type="radio" value="0" name="ipmode"> Auto IP</label>
+                    <label class="radio"><input type="radio" value="1" name="ipmode"> Static</label>
+                    <label class="radio"><input type="radio" value="2" name="ipmode"> DHCP</label>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Static Settings</legend>
+
+                    <label>IP<input type="ip" name="s_ip"></label>
+                    <label>Netmask<input type="ip" name="s_mask"></label>
+                    <label>Gateway<input type="ip" name="s_gw"></label>
+                </fieldset>
+
+                <fieldset>
+                    <legend>DHCP Server</legend>
+
+                    <div class="auto-grid">
+                        Enable DHCP Server
+                        <label class="slider"><input type="checkbox" name="dhcp_en"><span></span></label>
+                    </div>
+
+                    <label>Device IP<input type="ip" name="d_dev"></label>
+                    <label>Host IP<input type="ip" name="d_host"></label>
+                    <label>Netmask<input type="ip" name="d_mask"></label>
+                </fieldset>
+            </div>
+
+            <div>
+                <fieldset>
+                    <legend>Active IP Config</legend>
+
+                    <label>mDNS Name<input type="text" value="artnet.local" readonly></label>
+                    <label>IP<input type="text" name="a_ip" readonly></label>
+                    <label>Netmask<input type="text" name="a_mask" readonly></label>
+                    <label>Gateway<input type="text" name="a_gw" readonly></label>
+                </fieldset>
+
+                <input id="submit" type="submit" value="Apply Settings">
+                <div style="height: 40px"></div>
+
+
+                <input type="submit" value="Reset Config" form="rstCfg">
+                <input type="submit" value="Reboot Device" form="rstDev">
+                <input type="submit" value="Reboot into DFU Mode" form="rstDfu">
+            </div>
+        </form>
+    </div>
+
+    <form action="/reset-config" method="post" id="rstCfg" hidden></form>
+    <form action="/reset-device" method="post" id="rstDev" hidden></form>
+    <form action="/reset-dfu" method="post" id="rstDfu" hidden></form>
+</body>
+
+</html>

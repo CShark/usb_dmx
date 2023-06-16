@@ -1,6 +1,5 @@
 /* Includes ----------------------------------------------------------*/
 #include "profiling.h"
-#include "cdc_device.h"
 
 /* Private Definitions -----------------------------------------------*/
 #define DEBUG_PRINTF printf
@@ -20,7 +19,7 @@ static char event_ignore = 0;
 /* -------------------------------------------------------------------*/
 
 int _write(int file, unsigned char *data, int len) {
-    CDC_TransmitData(data, len);
+    //CDC_TransmitData(data, len);
     return len;
 }
 

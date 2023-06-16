@@ -43,7 +43,9 @@ void ncm_netif_poll(struct netif *netif) {
                 offset += q->len;
             }
 
-            if (netif->input(p, netif) != ERR_OK) {
+            netif->input(p, netif);
+
+            if (p->ref > 0) {
                 pbuf_free(p);
             }
         }
@@ -65,7 +67,7 @@ err_t ncm_netif_init(struct netif *netif) {
 
     netif->mtu = 1500;
 
-    netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
+    netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP | NETIF_FLAG_IGMP;
 
     netif->output = etharp_output;
     netif->linkoutput = ncm_netif_output;

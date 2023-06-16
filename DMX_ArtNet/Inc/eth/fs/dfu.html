@@ -1,0 +1,64 @@
+<html>
+
+<head>
+	<title>DMX-ArtNET</title>
+	<link rel="stylesheet" type="text/css" href="style.css" />
+	<style>
+		.loader {
+			border: 4px solid #f3f3f3;
+			/* Light grey */
+			border-top: 4px solid #3498db;
+			/* Blue */
+			border-radius: 50%;
+			width: 32px;
+			height: 32px;
+			animation: spin 2s linear infinite;
+		}
+
+		@keyframes spin {
+			0% {
+				transform: rotate(0deg);
+			}
+
+			100% {
+				transform: rotate(360deg);
+			}
+		}
+	</style>
+	<script>
+		setTimeout(() => {
+			setInterval(async () => {
+				var res = await fetch("/");
+				if (res.status == 200) {
+					setTimeout(() => {
+						window.location.replace("/");
+					}, 1000);
+				}
+			}, 1000);
+		}, 2000);
+	</script>
+</head>
+
+<body>
+	<h1>DMX-ArtNET Device</h1>
+
+	<div>
+		<nav>
+			<a href="/">Port Config</a>
+			<a href="/device.html">Device Config</a>
+		</nav>
+
+		<div class="container vert">
+			<h3>DFU Mode</h3>
+			<div>
+				The device is currently in DFU mode. To upload a new Firmware, use the STM32CubeProgrammer.
+			</div>
+			<div>
+				To switch back into normal mode, unplug and replug the device.
+			</div>
+			<div class="loader"></div>
+		</div>
+	</div>
+</body>
+
+</html>

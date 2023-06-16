@@ -36,6 +36,12 @@
 #include "lwipopts_test.h"
 #else /* LWIP_OPTTEST_FILE */
 
+//#define HTTPD_SERVER_AGENT         "NULL"
+#define LWIP_HTTPD_CUSTOM_FILES    1
+#define LWIP_HTTPD_SUPPORT_POST    1
+#define HTTPD_FSDATA_FILE          "eth/fs/fsdata.c"
+#define LWIP_HTTPD_DYNAMIC_HEADERS 1
+
 #define LWIP_IPV4                  1
 #define LWIP_IPV6                  0
 
@@ -44,7 +50,7 @@
 #define LWIP_NETCONN               0
 #define LWIP_NETIF_API             0
 
-#define LWIP_IGMP                  0
+#define LWIP_IGMP                  1
 #define LWIP_ICMP                  1
 
 #define LWIP_SNMP                  1
@@ -54,7 +60,7 @@
 #endif
 
 #define LWIP_DNS                   0
-#define LWIP_MDNS_RESPONDER        0
+#define LWIP_MDNS_RESPONDER        1
 
 #define LWIP_NUM_NETIF_CLIENT_DATA (LWIP_MDNS_RESPONDER)
 
@@ -129,7 +135,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define MEMP_NUM_RAW_PCB        4
 /* MEMP_NUM_UDP_PCB: the number of UDP protocol control blocks. One
    per active UDP "connection". */
-#define MEMP_NUM_UDP_PCB        6
+#define MEMP_NUM_UDP_PCB        7
 /* MEMP_NUM_TCP_PCB: the number of simulatenously active TCP
    connections. */
 #define MEMP_NUM_TCP_PCB        6
@@ -158,10 +164,10 @@ a lot of data that needs to be copied, this should be set high. */
 
 /* ---------- Pbuf options ---------- */
 /* PBUF_POOL_SIZE: the number of buffers in the pbuf pool. */
-#define PBUF_POOL_SIZE          16
+#define PBUF_POOL_SIZE          32
 
 /* PBUF_POOL_BUFSIZE: the size of each pbuf in the pbuf pool. */
-#define PBUF_POOL_BUFSIZE       512
+#define PBUF_POOL_BUFSIZE       256
 
 /** SYS_LIGHTWEIGHT_PROT
  * define SYS_LIGHTWEIGHT_PROT in lwipopts.h if you want inter-task protection

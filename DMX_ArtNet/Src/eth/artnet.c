@@ -12,7 +12,6 @@ static struct netif *artif;
 static short artnet_port = 6454;
 
 static unsigned char artnet_portConfig[4];
-static const unsigned char *initial_portConfig;
 static unsigned int artnet_timeout[4];
 
 static CONFIG *config;
@@ -25,8 +24,7 @@ static void ArtNet_HandleOutput(ArtNet_Dmx *data);
 static void ArtNet_HandleInput(ArtNet_Input *data, const ip_addr_t *addr, u16_t port);
 static void ArtNet_ApplyFailover(int idx);
 
-void ArtNet_Init(struct netif *netif, const unsigned char *portConfig) {
-    initial_portConfig = portConfig;
+void ArtNet_Init(struct netif *netif) {
     artif = netif;
     artnet = udp_new();
     udp_bind(artnet, IP4_ADDR_ANY, artnet_port);
@@ -36,14 +34,8 @@ void ArtNet_Init(struct netif *netif, const unsigned char *portConfig) {
     config = Config_GetActive();
 
     // Initial directions
-    memcpy(artnet_portConfig, portConfig, 4);
-
     for (int i = 0; i < 4; i++) {
-        if (config->ArtNet[i].PortDirection == 0x03) {
-            artnet_portConfig[i] = USART_INPUT;
-        } else if (config->ArtNet[i].PortDirection == 0x01) {
-            artnet_portConfig[i] = USART_OUTPUT;
-        }
+        artnet_portConfig[i] = config->ArtNet[i].PortDirection;
     }
 
     USART_InitPortDirections(artnet_portConfig);
@@ -159,7 +151,7 @@ static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port, unsigned cha
     }
 
     reply->Status1 = 0x20;
-    reply->Status2 = (1 << 2) | (1 << 3) | (1 << 6);
+    reply->Status2 = (1 << 0) | (1 << 2) | (1 << 3) | (1 << 6) | (1 << 7);
     if (config->Mode == CONFIGIP_DHCP) {
         reply->Status2 |= (1 << 1);
     }

@@ -7,7 +7,12 @@
         "string.h": "c",
         "artnet.h": "c",
         "flash_ee.h": "c",
-        "cdc_device.h": "c"
+        "cdc_device.h": "c",
+        "fs.h": "c",
+        "limits": "c",
+        "cmsis_armclang.h": "c",
+        "cmsis_armclang_ltm.h": "c",
+        "cmsis_gcc.h": "c"
     },
     "cmake.configureOnOpen": false
 }

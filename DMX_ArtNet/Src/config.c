@@ -5,12 +5,15 @@
 #include "lwip/dhcp.h"
 #include "lwip/ip_addr.h"
 #include "lwip/netif.h"
+#include "lwip/apps/mdns.h"
 
 static struct netif *netif;
+static const unsigned char *initialPortConfig;
 static CONFIG activeConfig;
 
-void Config_Init(struct netif *net) {
+void Config_Init(struct netif *net, const unsigned char *portDirection) {
     netif = net;
+    initialPortConfig = portDirection;
 
     Config_Reset();
     EE_ReadConfig(&activeConfig);
@@ -82,6 +85,7 @@ void Config_ApplyNetwork() {
         break;
     }
 
+    mdns_resp_netif_settings_changed(netif);
     Config_Store();
 }
 
@@ -120,7 +124,7 @@ CONFIG Config_GetDefault() {
         cfg.ArtNet[i].PortFlags = 0;
 
         cfg.ArtNet[i].FailoverMode = ArtFail_Hold;
-        cfg.ArtNet[i].PortDirection = 0x00;
+        cfg.ArtNet[i].PortDirection = initialPortConfig[i];
 
         cfg.ArtNet[i].AcnPriority = 100;
     }

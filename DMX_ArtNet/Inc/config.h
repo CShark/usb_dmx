@@ -27,7 +27,7 @@ typedef struct {
     char PortDirection; // First Bit = enable override, second bit (1 = Input, 0 = Output)
     ArtNet_Port_Flags PortFlags;
     ArtNet_Failover FailoverMode;
-    char AcnPriority;
+    unsigned char AcnPriority;
 } ARTNET_CONFIG;
 
 typedef struct {
@@ -46,7 +46,7 @@ typedef struct {
 } CONFIG;
 #pragma pack()
 
-void Config_Init(struct netif *netif);
+void Config_Init(struct netif *net, const unsigned char *portDirection);
 
 void Config_Reset();
 

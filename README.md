@@ -87,4 +87,8 @@ Here are two lists on digikey that include all necessary components, except for 
 - [Parts for the Display-Module](https://www.digikey.com/en/mylists/list/5N5ETFD0BY)
 
 ## Firmware
-The firmware is completely custom, only based on CMSIS (no HAL) and supports the important parts of the ArtNET protocol. Which port is an input and which an output can be set using the dip switches, but later be overwritten using either ArtNET commands, the WebUI or the display menu. The device also has a reset button to reset the configuration for when things go completely wrong. The firmware can be updated using the WebUI, if the device is completely bricked it can be put into bootloader mode using a jumper on the mainboard.
+The firmware is completely custom, only based on CMSIS (no HAL) and supports the important parts of the ArtNET protocol. Which port is an input and which an output can be set using the dip switches, but later be overwritten using either ArtNET commands, the WebUI or the display menu. The device also has a reset button to reset the configuration for when things go completely wrong. If the device is completely bricked it can be put into bootloader mode using a jumper on the mainboard.
+
+
+The device supports mDNS and is always reachable using `artnet.local` in addition to its ip-address. The WebUI allows configuring each individual port with all the settings that ArtNET-Commands also support. You can also change the ip-configuration of the device and its internal minimal DHCP-Server, as well as clearing all settings, rebooting the device and switching the device into DFU/Bootloader mode to flash a new firmware.
+![](/Images/webconfig1.png)

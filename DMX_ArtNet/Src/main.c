@@ -3,7 +3,11 @@
 #include "dmx_usart.h"
 #include "eth/artnet.h"
 #include "eth/dhcp_server.h"
+#include "eth/http_custom.h"
 #include "eth/ncm_netif.h"
+#include "lwip/apps/httpd.h"
+#include "lwip/apps/mdns.h"
+#include "lwip/igmp.h"
 #include "lwip/init.h"
 #include "lwip/netif.h"
 #include "lwip/timeouts.h"
@@ -45,6 +49,9 @@ int main(void) {
     USART_Init();
 
     lwip_init();
+    httpd_init();
+    igmp_init();
+    mdns_resp_init();
 
     netif_add(&ncm_if, IP4_ADDR_ANY, IP4_ADDR_ANY, IP4_ADDR_ANY, NULL, ncm_netif_init, netif_input);
     netif_set_default(&ncm_if);
@@ -53,8 +60,12 @@ int main(void) {
     ReadPortConfig();
 
     DhcpServer_Init();
-    Config_Init(&ncm_if);
-    ArtNet_Init(&ncm_if, portConfig);
+    Config_Init(&ncm_if, portConfig);
+    ArtNet_Init(&ncm_if);
+    httpc_init(&ncm_if);
+
+    igmp_start(&ncm_if);
+    mdns_resp_add_netif(&ncm_if, "artnet", 3600);
 
     unsigned int last_inputTick = 0;
     unsigned int last_forcedInputTick = 0;
@@ -76,6 +87,7 @@ int main(void) {
 
         sys_check_timeouts();
         ArtNet_TimeoutTick();
+        httpc_timeout();
     }
 }
 
@@ -90,9 +102,9 @@ static void ReadPortConfig() {
     GPIOA->MODER &= ~(GPIO_MODER_MODE0_Msk | GPIO_MODER_MODE1_Msk | GPIO_MODER_MODE2_Msk | GPIO_MODER_MODE3_Msk);
     GPIOA->PUPDR |= GPIO_PUPDR_PUPD0_1 | GPIO_PUPDR_PUPD1_1 | GPIO_PUPDR_PUPD2_1 | GPIO_PUPDR_PUPD3_1;
 
-    // detect configuration
+    // detect configuration, port mapping is reverse to ports
     for (int i = 0; i < 4; i++) {
-        if ((GPIOA->IDR & (1 << i)) != 0) {
+        if ((GPIOA->IDR & (1 << (3 - i))) != 0) {
             portConfig[i] = USART_INPUT;
         } else {
             portConfig[i] = USART_OUTPUT;

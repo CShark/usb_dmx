@@ -1,0 +1,168 @@
+html,
+body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+
+body > div {
+    display:grid; grid-template-columns: auto 1fr;
+}
+
+h1 {
+    margin: 0;
+    padding: 30px;
+    background-color: dodgerblue;
+}
+
+nav {
+    display: flex;
+    flex-direction: column;
+    background: dodgerblue;
+    gap: 10px;
+    padding-top: 20px;
+}
+
+nav a {
+    background-color: powderblue;
+    color: black;
+    padding: 20px 40px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 14pt;
+}
+
+nav a:hover,
+nav a:visited {
+    color: black;
+}
+
+.container.vert {
+    display: flex;
+    flex-direction: column;
+    align-self: flex-start;
+    justify-self: center;
+    align-items: center;
+}
+
+.container {
+    margin: 10px;
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+    grid-template-rows: auto auto auto 1fr;
+    justify-content: center;
+    justify-items: center;
+    gap: 20px;
+}
+
+.container>div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+h3 {
+    text-align: center;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.auto-grid {
+    display: grid;
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
+    align-items: center;
+    justify-items: stretch;
+    gap: 10px;
+}
+
+.auto-grid label {
+    justify-self: center;
+}
+
+.slider {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 17px;
+}
+
+.slider input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider span {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .1s;
+    transition: .1s;
+    border-radius: 34px;
+}
+
+.slider span:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    -webkit-transition: .1s;
+    transition: .1s;
+    border-radius: 50%;
+}
+
+input:checked+span {
+    background-color: #2196F3;
+}
+
+input:checked+span:before {
+    -webkit-transform: translateX(14px);
+    -ms-transform: translateX(14px);
+    transform: translateX(14px);
+}
+
+input[type=submit] {
+    grid-column: 1 / span 4;
+    align-self: flex-start;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+fieldset label.radio {
+    flex-direction: row;
+}
+
+textarea {
+    resize: none;
+}
+
+input[type='submit'] {
+    min-width: 200px;
+}
