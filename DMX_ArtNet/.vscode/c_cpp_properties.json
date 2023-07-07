@@ -4,7 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/lwip/src/include"
+                "${workspaceFolder}/lwip/src/include",
+                "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32G4xx/Include"
             ],
             "defines": [
                 "_DEBUG",

@@ -1,11 +1,11 @@
 #include "config.h"
 #include "eth/dhcp_server.h"
 #include "flash_ee.h"
+#include "lwip/apps/mdns.h"
 #include "lwip/autoip.h"
 #include "lwip/dhcp.h"
 #include "lwip/ip_addr.h"
 #include "lwip/netif.h"
-#include "lwip/apps/mdns.h"
 
 static struct netif *netif;
 static const unsigned char *initialPortConfig;
@@ -18,6 +18,10 @@ void Config_Init(struct netif *net, const unsigned char *portDirection) {
     Config_Reset();
     EE_ReadConfig(&activeConfig);
     Config_ApplyNetwork();
+}
+
+struct netif *Config_GetNetif() {
+    return netif;
 }
 
 CONFIG *Config_GetActive() {
@@ -121,7 +125,7 @@ CONFIG Config_GetDefault() {
 
         cfg.ArtNet[i].Universe = ARTNET_UNI + i;
 
-        cfg.ArtNet[i].PortFlags = 0;
+        cfg.ArtNet[i].PortFlags = PORT_FLAG_RDM;
 
         cfg.ArtNet[i].FailoverMode = ArtFail_Hold;
         cfg.ArtNet[i].PortDirection = initialPortConfig[i];

@@ -12,6 +12,7 @@
 #include "lwip/netif.h"
 #include "lwip/timeouts.h"
 #include "ncm_device.h"
+#include "oled/oled.h"
 #include "profiling.h"
 #include "systimer.h"
 #include "usb.h"
@@ -67,6 +68,8 @@ int main(void) {
     igmp_start(&ncm_if);
     mdns_resp_add_netif(&ncm_if, "artnet", 3600);
 
+    OLED_Init();
+
     unsigned int last_inputTick = 0;
     unsigned int last_forcedInputTick = 0;
 
@@ -88,6 +91,7 @@ int main(void) {
         sys_check_timeouts();
         ArtNet_TimeoutTick();
         httpc_timeout();
+        OLED_Tick();
     }
 }
 
@@ -141,14 +145,15 @@ static void Clock_Init(void) {
     }
     RCC->CFGR &= ~RCC_CFGR_HPRE_3;
 
-    // Select & Enable IO Clocks (PLL > USB, ADC; PLLC (71.875) > UART)
+    // Select & Enable IO Clocks (PLL > USB, ADC; PLLC (71.875) > UART & I²C)
     RCC->CCIPR = RCC_CCIPR_CLK48SEL_1 | RCC_CCIPR_ADC12SEL_1;
     RCC->AHB2ENR |= RCC_AHB2ENR_ADC12EN | RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN | RCC_AHB2ENR_GPIOCEN;
     RCC->APB1ENR1 |= RCC_APB1ENR1_USBEN | RCC_APB1ENR1_UART4EN | RCC_APB1ENR1_USART3EN | RCC_APB1ENR1_USART2EN | RCC_APB1ENR1_TIM2EN;
+    RCC->APB1ENR2 |= RCC_APB1ENR2_I2C4EN;
     RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
 
     // Enable DMAMUX & DMA1 Clock
-    RCC->AHB1ENR |= RCC_AHB1ENR_DMAMUX1EN | RCC_AHB1ENR_DMA1EN;
+    RCC->AHB1ENR |= RCC_AHB1ENR_DMAMUX1EN | RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMA2EN;
 
     // Configure RTC-Clock for Backup registers, if necessary
     RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
@@ -172,15 +177,19 @@ static void Clock_Init(void) {
  */
 static void GPIO_Init(void) {
     /*  PA
+        5 > Config Reset
         11 & 12 > USB
         13 & 14 > SWDIO & SWCLK
         15 > DMX 1 Direction Output
      */
-    GPIOA->MODER &= ~(GPIO_MODER_MODE15);
+    GPIOA->MODER &= ~(GPIO_MODER_MODE15 | GPIO_MODER_MODE5);
     GPIOA->MODER |= GPIO_MODER_MODE15_0;
     GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPD15);
+    GPIOA->PUPDR |= GPIO_PUPDR_PUPD5_1;
 
     /* PB
+      1, 2, 13, 14 > OLED Navigation
+      15 > OLED Sense
       3 & 4 > DMX 4 TX,RX
       5,6,7 > DMX 3 DE,TX,RX
       8 > BOOT0
@@ -188,17 +197,19 @@ static void GPIO_Init(void) {
      */
     GPIOB->AFR[0] = (7 << GPIO_AFRL_AFSEL3_Pos) | (7 << GPIO_AFRL_AFSEL4_Pos) | (7 << GPIO_AFRL_AFSEL6_Pos) | (7 << GPIO_AFRL_AFSEL7_Pos);
     GPIOB->AFR[1] = (7 << GPIO_AFRH_AFSEL10_Pos) | (7 << GPIO_AFRH_AFSEL11_Pos);
-    GPIOB->MODER &= ~(GPIO_MODER_MODE3 | GPIO_MODER_MODE4 | GPIO_MODER_MODE5 | GPIO_MODER_MODE6 | GPIO_MODER_MODE7 | GPIO_MODER_MODE8 | GPIO_MODER_MODE10 | GPIO_MODER_MODE11 | GPIO_MODER_MODE12);
+    GPIOB->MODER &= ~(GPIO_MODER_MODE1 | GPIO_MODER_MODE2 | GPIO_MODER_MODE3 | GPIO_MODER_MODE4 | GPIO_MODER_MODE5 | GPIO_MODER_MODE6 | GPIO_MODER_MODE7 | GPIO_MODER_MODE8 | GPIO_MODER_MODE10 | GPIO_MODER_MODE11 | GPIO_MODER_MODE12 | GPIO_MODER_MODE13 | GPIO_MODER_MODE14 | GPIO_MODER_MODE15);
     GPIOB->MODER |= GPIO_MODER_MODE3_1 | GPIO_MODER_MODE4_1 | GPIO_MODER_MODE5_0 | GPIO_MODER_MODE6_1 | GPIO_MODER_MODE7_1 | GPIO_MODER_MODE10_1 | GPIO_MODER_MODE11_1 | GPIO_MODER_MODE12_0;
-    GPIOB->PUPDR |= GPIO_PUPDR_PUPD4_0 | GPIO_PUPDR_PUPD7_0 | GPIO_PUPDR_PUPD11_0;
+    GPIOB->PUPDR |= GPIO_PUPDR_PUPD1_1 | GPIO_PUPDR_PUPD2_1 | GPIO_PUPDR_PUPD4_0 | GPIO_PUPDR_PUPD7_0 | GPIO_PUPDR_PUPD11_0 | GPIO_PUPDR_PUPD13_1 | GPIO_PUPDR_PUPD14_1 | GPIO_PUPDR_PUPD15_1;
 
     /* PC
+      6, 7 > I²C SCL, SDA OLED
       10,11 > DMX 1 TX,RX
       12  > DMX 4 DE
      */
+    GPIOC->AFR[0] = (8 << GPIO_AFRL_AFSEL6_Pos) | (8 << GPIO_AFRL_AFSEL7_Pos);
     GPIOC->AFR[1] = (5 << GPIO_AFRH_AFSEL10_Pos) | (5 << GPIO_AFRH_AFSEL11_Pos);
-    GPIOC->MODER &= ~(GPIO_MODER_MODE10 | GPIO_MODER_MODE11 | GPIO_MODER_MODE12);
-    GPIOC->MODER |= GPIO_MODER_MODE10_1 | GPIO_MODER_MODE11_1 | GPIO_MODER_MODE12_0;
+    GPIOC->MODER &= ~(GPIO_MODER_MODE6 | GPIO_MODER_MODER7 | GPIO_MODER_MODE10 | GPIO_MODER_MODE11 | GPIO_MODER_MODE12);
+    GPIOC->MODER |= GPIO_MODER_MODER6_1 | GPIO_MODER_MODER7_1 | GPIO_MODER_MODE10_1 | GPIO_MODER_MODE11_1 | GPIO_MODER_MODE12_0;
     GPIOC->PUPDR |= GPIO_PUPDR_PUPD11_0;
 }
 

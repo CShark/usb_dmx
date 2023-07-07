@@ -8,6 +8,10 @@
 #include "lwip/pbuf.h"
 #include "stm32g4xx.h"
 
+// String representation and continuous number for firmware revisions
+#define FIRMWARE_VER "2.0"
+#define FIRMWARE_INT 4
+
 #pragma pack(1)
 typedef struct {
     union {
@@ -32,6 +36,9 @@ typedef struct {
 #define UI32_BIG_ENDIAN(x) (x)
 #define UI32_LITTLE_ENDIAN(x) ((x & 0xFF000000) >> 24 | (x & 0x00FF0000) >> 8 | (x & 0x0000FF00) << 8 | (x & 0x000000FF) << 24)
 //#endif
+
+// dummy define for compatibilty with autogen for arduino
+#define PROGMEM
 
 #define STM32_SYSMEM 0x1FFF0000
 #define UID ((UID_TypeDef *)UID_BASE)

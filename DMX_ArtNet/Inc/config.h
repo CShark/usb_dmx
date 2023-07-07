@@ -58,12 +58,15 @@ void Config_SetGateway(const unsigned char *gw);
 void Config_SetNetmask(const unsigned char *net);
 
 CONFIG *Config_GetActive();
+struct netif* Config_GetNetif();
 void Config_ApplyNetwork();
 void Config_Store();
 
 void Config_StoreFailsafeScene(const unsigned char *buffer, char art_port);
 void Config_LoadFailsafeScene(unsigned char* target, int index);
 
+
 CONFIG Config_GetDefault();
+
 
 #endif

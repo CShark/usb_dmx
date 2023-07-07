@@ -61,6 +61,7 @@ The total cost for this device is currently aproximately 90€. You can save mon
 |-|-|-|
 | 1 | OLED-Display | 0.96" with I²C |
 | 1 | FFC Connector | 1x10, Pitch 1mm |
+| 2 | Resistor | 4K7 | 0603 |
 | 4 | Switch | Through Hole, Height 10mm |
 | 1 | FFC Cable | 1x10, Pitch 1mm, Length ~100mm, Type B (opposing-side contacts) |
 
