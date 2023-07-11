@@ -364,6 +364,7 @@ static void httpc_parsePortConfig(struct pbuf *p) {
         }
     }
 
+    Config_ApplyArtNet();
     Config_Store();
 }
 
@@ -436,4 +437,5 @@ static void httpc_setIpConfig(struct pbuf *p) {
     }
 
     Config_ApplyNetwork();
+    Config_Store();
 }

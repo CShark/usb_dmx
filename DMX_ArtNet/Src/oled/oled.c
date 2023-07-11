@@ -10,15 +10,25 @@ static void OLED_SendData(const unsigned char *buffer, unsigned short len);
 static void OLED_RenderBoot();
 static void OLED_RenderDFU();
 static void OLED_RenderIpOverview();
-static void OLED_RenderMenu();
-static void OLED_RenderEdit();
 
-static void OLED_NavigateEdit(OLED_Buttons btn);
 static void OLED_NavigateMenu(OLED_Buttons btn);
+static void OLED_RenderMenu();
+static void OLED_NavigateEdit(OLED_Buttons btn);
+static void OLED_RenderEdit();
+static void OLED_NavigateValueSelect(OLED_Buttons btn);
+static void OLED_RenderValueSelect();
+static void OLED_NavigateEditSelect(OLED_Buttons btn);
+static void OLED_RenderEditSelect();
+static void OLED_NavigateConfirm(OLED_Buttons btn);
+static void OLED_RenderConfirm();
 
 static void OLED_InitPort();
 static void OLED_InitIp();
 static void OLED_InitFirmware();
+
+static void OLED_ConfirmPort();
+static void OLED_ConfirmIp();
+static void OLED_ConfirmReset();
 
 static const unsigned char *pending_buffer;
 static unsigned short pending_len;
@@ -27,6 +37,9 @@ static void (*pending_callback)();
 static unsigned int lastTick;
 static unsigned int bootTimer;
 static unsigned int lastInputTick;
+static unsigned int lastInputRepeatTick;
+static unsigned int dfuTimer;
+static unsigned int inputRepeatTimer;
 
 static char *opt_disabled[] = {"Disabled", "Enabled"};
 static char *opt_ipMode[] = {"AutoIP", "Static", "DHCP"};
@@ -67,8 +80,6 @@ static char *listItems[] = {
     // Firmware - 2
     "Version",
     "Firmware Id",
-    // Confirm Dialog - 1
-    "Confirm",
 };
 
 static OLED_ScreenData oledScreens[] = {
@@ -93,6 +104,7 @@ static OLED_ScreenData oledScreens[] = {
         .OnRender = OLED_RenderEdit,
         .OnNavigate = OLED_NavigateEdit,
         .OnInit = OLED_InitPort,
+        .OnConfirm = OLED_ConfirmPort,
         .ListItems = &listItems[8],
         .ListSize = 9,
     },
@@ -100,6 +112,7 @@ static OLED_ScreenData oledScreens[] = {
         .OnRender = OLED_RenderEdit,
         .OnNavigate = OLED_NavigateEdit,
         .OnInit = OLED_InitIp,
+        .OnConfirm = OLED_ConfirmIp,
         .ListItems = &listItems[8 + 9],
         .ListSize = 8,
     },
@@ -111,11 +124,10 @@ static OLED_ScreenData oledScreens[] = {
         .ListSize = 2,
     },
     {
-        .OnRender = OLED_RenderEdit,
-        .OnNavigate = NULL,
+        .OnRender = OLED_RenderConfirm,
+        .OnNavigate = OLED_NavigateConfirm,
+        .OnConfirm = OLED_ConfirmReset,
         .OnInit = NULL,
-        .ListItems = &listItems[8 + 9 + 8 + 2],
-        .ListItems = 1,
     },
     {
         .OnRender = OLED_RenderDFU,
@@ -139,7 +151,7 @@ static OLED_Transition oledTransitionMap[] = {
 
 static const unsigned char oledTransitions = 9;
 
-static OLED_State oledState = {.State = OLEDM_Offline, .ActiveScreen = &oledScreens[0]};
+static OLED_State oledState = {.State = OLEDM_Offline, .ActiveScreen = &oledScreens[0], .OnRender = NULL, .OnNavigate = NULL};
 
 void OLED_Init() {
     // Do not enable OLED if subboard is not detected
@@ -174,6 +186,16 @@ void OLED_Tick() {
         return;
     }
 
+    if (dfuTimer != 0) {
+        if (sys_now() - dfuTimer > 500) {
+            PWR->CR1 |= PWR_CR1_DBP;
+            TAMP->BKP0R = 0xF0;
+            PWR->CR1 &= ~PWR_CR1_DBP;
+            NVIC_SystemReset();
+            return;
+        }
+    }
+
     if (oledState.ActiveScreen == &oledScreens[0]) {
         if (sys_now() - lastTick > 250) {
             forceRefresh = 1;
@@ -187,6 +209,8 @@ void OLED_Tick() {
 
     if (sys_now() - lastInputTick > 10) {
         OLED_Buttons btn = OLEDB_None;
+        char repeat = 0;
+
         if (GPIOB->IDR & (1 << 1)) {
             btn = OLEDB_Confirm;
         } else if (GPIOB->IDR & (1 << 2)) {
@@ -197,12 +221,24 @@ void OLED_Tick() {
             btn = OLEDB_Back;
         }
 
-        if (btn != oledState.LastButton) {
-            if (oledState.ActiveScreen->OnNavigate != NULL && oledState.State == OLEDM_Active) {
-                oledState.ActiveScreen->OnNavigate(btn);
+        if (btn == OLEDB_None || btn != oledState.LastButton) {
+            inputRepeatTimer = 500;
+        } else if ((sys_now() - lastInputRepeatTick) > inputRepeatTimer && btn != OLEDB_None) {
+            repeat = 1;
+            inputRepeatTimer = 100;
+        }
+
+        if (btn != oledState.LastButton || repeat) {
+            if (oledState.State == OLEDM_Active) {
+                if (oledState.OnNavigate != NULL) {
+                    oledState.OnNavigate(btn);
+                } else if (oledState.ActiveScreen->OnNavigate != NULL) {
+                    oledState.ActiveScreen->OnNavigate(btn);
+                }
             }
 
             forceRefresh = 1;
+            lastInputRepeatTick = sys_now();
         }
 
         lastInputTick = sys_now();
@@ -217,7 +253,11 @@ void OLED_Tick() {
 
         SSD1306_ClearBuffer();
         SSD1306_DrawBorder(0, 0, 128, 64, 1, 1);
-        oledState.ActiveScreen->OnRender();
+        if (oledState.OnRender != NULL) {
+            oledState.OnRender();
+        } else {
+            oledState.ActiveScreen->OnRender();
+        }
         SSD1306_SendBuffer();
 
         lastTick = sys_now();
@@ -285,95 +325,13 @@ void I2C4_EV_IRQHandler() {
     }
 }
 
-// OLED Screens
-static void OLED_RefreshTick() {
-    // switch (oledState.RenderMode) {
-    // case OLEDRM_Static:
-    //     switch (oledState.Screen) {
-    //     case OLEDS_PreBoot:
-    //     case OLEDS_Boot:
-    //         SSD1306_DrawBitmap(bmp_Bootlogo, sizeof(bmp_Bootlogo), 64 - 52 / 2, 32 - 52 / 2, 51, 53);
-    //         break;
-    //     case OLEDS_Overview: {
-    //         SSD1306_DrawBorder(0, 0, 128, 64, 1, 1);
+static void OLED_RenderEditFrame(char *title) {
+    unsigned short width;
+    unsigned short height;
 
-    //         char *ip = ip4addr_ntoa(&netif->ip_addr);
-    //         SSD1306_MeasureString(ip, 15, &width, &height, &Dialog_plain_12);
-    //         SSD1306_DrawString(ip, 15, 64 - width / 2, height + 4, &Dialog_plain_12, 1);
-
-    //         ip = ip4addr_ntoa(&netif->netmask);
-    //         SSD1306_MeasureString(ip, 15, &width, &height, &Dialog_plain_12);
-    //         SSD1306_DrawString(ip, 15, 64 - width / 2, (height + 4) * 2, &Dialog_plain_12, 1);
-
-    //         SSD1306_MeasureString("artnet.local", 12, &width, &height, &Dialog_plain_12);
-    //         SSD1306_DrawString("artnet.local", 12, 64 - width / 2, (height + 4) * 3, &Dialog_plain_12, 1);
-    //         break;
-    //     }
-    //     default:
-    //         break;
-    //     }
-    //     break;
-    // case OLEDRM_Menu: {
-    //     SSD1306_DrawBorder(0, 0, 128, 64, 1, 1);
-
-    //     char next = oledState.Navigation.SelectedItem + 1;
-    //     char prev = oledState.Navigation.SelectedItem - 1;
-
-    //     next = (next + oledState.Navigation.ItemCount) % oledState.Navigation.ItemCount;
-    //     prev = (prev + oledState.Navigation.ItemCount) % oledState.Navigation.ItemCount;
-
-    //     SSD1306_MeasureString(oled_menu_detail[prev], 15, &width, &height, &Dialog_plain_10);
-    //     SSD1306_DrawString(oled_menu_detail[prev], 15, 64 - width / 2, 10 + height / 2, &Dialog_plain_10, 1);
-
-    //     SSD1306_MeasureString(oled_menu_detail[oledState.Navigation.SelectedItem], 15, &width, &height, &Dialog_plain_12);
-    //     SSD1306_DrawString(oled_menu_detail[oledState.Navigation.SelectedItem], 15, 64 - width / 2, 30 + height / 2, &Dialog_plain_12, 1);
-
-    //     SSD1306_MeasureString(oled_menu_detail[next], 15, &width, &height, &Dialog_plain_10);
-    //     SSD1306_DrawString(oled_menu_detail[next], 15, 64 - width / 2, 50 + height / 2, &Dialog_plain_10, 1);
-
-    //     SSD1306_FillRectangle(32, 24, 64, 1, 1);
-    //     SSD1306_FillRectangle(32, 40, 64, 1, 1);
-    //     break;
-    // }
-    // case OLEDRM_Edit: {
-    //     SSD1306_DrawBorder(0, 0, 128, 64, 1, 1);
-    //     SSD1306_MeasureString(oledState.EditTitle, 15, &width, &height, &Dialog_plain_12);
-    //     SSD1306_FillRectangle(0, 0, 128, height + 8, 1);
-    //     SSD1306_DrawString(oledState.EditTitle, 15, 64 - width / 2, height + 2, &Dialog_plain_12, 0);
-
-    //     if (!oledState.EditEnabled) {
-    //         if (oledState.EditMode == OLEDE_List) {
-    //             char *txt = oledState.ListEntries[oledState.SelectedItem];
-    //             SSD1306_MeasureString(txt, 15, &width, &height, &Dialog_plain_12);
-    //             SSD1306_DrawString(txt, 15, 64 - width / 2, 50, &Dialog_plain_12, 1);
-    //         } else {
-    //             SSD1306_MeasureString(oledState.EditValue, 64, &width, &height, &Dialog_plain_12);
-    //             if (width < 120) {
-    //                 SSD1306_DrawString(oledState.EditValue, 64, 64 - width / 2, 50, &Dialog_plain_12, 1);
-    //             } else {
-    //                 SSD1306_DrawString(oledState.EditValue, 64, 4, 50, &Dialog_plain_12, 1);
-    //             }
-    //         }
-    //     } else {
-    //         if (oledState.EditMode != OLEDE_List) {
-    //             unsigned short charWidth;
-    //             SSD1306_MeasureString(&oledState.EditValue[oledState.CursorPos], 1, &charWidth, &height, &Dialog_plain_12);
-    //             SSD1306_MeasureString(oledState.EditValue, oledState.CursorPos, &width, &height, &Dialog_plain_12);
-
-    //             SSD1306_DrawStringHighlighted(oledState.EditValue, 64, oledState.CursorPos, 64 - width - charWidth / 2, 50, &Dialog_plain_12, 1);
-    //         }
-
-    //         if (oledState.EditEnabled == 2) {
-    //             SSD1306_FillRectangle(16, 16, 64 + 32, 32, 1);
-    //             SSD1306_FillRectangle(17, 17, 64 + 30, 30, 0);
-
-    //             char *txt = oledState.ListEntries[oledState.SelectedItem];
-    //             SSD1306_MeasureString(txt, 15, &width, &height, &Dialog_plain_12);
-    //             SSD1306_DrawString(txt, 15, 64 - width / 2, 30 + height / 2, &Dialog_plain_12, 1);
-    //         }
-    //     }
-    // }
-    // }
+    SSD1306_MeasureString(title, 15, &width, &height, &Dialog_plain_12);
+    SSD1306_FillRectangle(0, 0, 128, height + 8, 1);
+    SSD1306_DrawString(title, 15, 64 - width / 2, height + 2, &Dialog_plain_12, 0);
 }
 
 static void OLED_RenderBoot() {
@@ -382,6 +340,17 @@ static void OLED_RenderBoot() {
 }
 
 static void OLED_RenderDFU() {
+    dfuTimer = sys_now();
+    if (dfuTimer == 0)
+        dfuTimer--;
+
+    SSD1306_ClearBuffer();
+
+    unsigned short width;
+    unsigned short height;
+
+    SSD1306_MeasureString("DFU Mode", 9, &width, &height, &Dialog_plain_12);
+    SSD1306_DrawString("DFU Mode", 9, 64 - width / 2, 32 + height / 2, &Dialog_plain_12, 1);
 }
 
 static void OLED_RenderIpOverview() {
@@ -429,9 +398,7 @@ static void OLED_RenderEdit() {
     unsigned char i = oledState.SelectedMenuItem;
     OLED_EditFieldMetadata *field;
 
-    SSD1306_MeasureString(oledState.ActiveScreen->ListItems[i], 15, &width, &height, &Dialog_plain_12);
-    SSD1306_FillRectangle(0, 0, 128, height + 8, 1);
-    SSD1306_DrawString(oledState.ActiveScreen->ListItems[i], 15, 64 - width / 2, height + 2, &Dialog_plain_12, 0);
+    OLED_RenderEditFrame(oledState.ActiveScreen->ListItems[i]);
 
     field = &oledState.EditInfo.Fields[i];
     char *value = field->Value;
@@ -446,6 +413,60 @@ static void OLED_RenderEdit() {
     } else {
         SSD1306_DrawString(value, 64, 4, 50, &Dialog_plain_12, 1);
     }
+}
+
+static void OLED_RenderEditSelect() {
+    unsigned short width;
+    unsigned short height;
+    unsigned char i = oledState.SelectedMenuItem;
+    OLED_EditFieldMetadata *field;
+
+    OLED_RenderEditFrame(oledState.ActiveScreen->ListItems[i]);
+
+    field = &oledState.EditInfo.Fields[i];
+
+    unsigned short charWidth;
+    SSD1306_MeasureString(&field->Value[oledState.EditInfo.CursorPosition], 1, &charWidth, &height, &Dialog_plain_12);
+    SSD1306_MeasureString(field->Value, oledState.EditInfo.CursorPosition, &width, &height, &Dialog_plain_12);
+
+    SSD1306_DrawStringHighlighted(field->Value, 64, oledState.EditInfo.CursorPosition, 64 - width - charWidth / 2, 50, &Dialog_plain_12, 1);
+}
+
+static void OLED_RenderValueSelect() {
+    unsigned short width;
+    unsigned short height;
+    OLED_RenderEditFrame(oledState.ActiveScreen->ListItems[oledState.SelectedMenuItem]);
+
+    SSD1306_FillRectangle(16, 16, 64 + 32, 32, 1);
+    SSD1306_FillRectangle(17, 17, 64 + 30, 30, 0);
+
+    OLED_EditFieldMetadata *field = &oledState.EditInfo.Fields[oledState.SelectedMenuItem];
+
+    if (field->Mode == OLEDE_List) {
+        SSD1306_MeasureString(field->ValueList[oledState.EditInfo.SelectedValue], 15, &width, &height, &Dialog_plain_12);
+        SSD1306_DrawString(field->ValueList[oledState.EditInfo.SelectedValue], 15, 64 - width / 2, 30 + height / 2, &Dialog_plain_12, 1);
+    } else {
+        SSD1306_MeasureString(&oledState.EditInfo.SelectedValue, 1, &width, &height, &Dialog_plain_12);
+        SSD1306_DrawString(&oledState.EditInfo.SelectedValue, 1, 64 - width / 2, 30 + height / 2, &Dialog_plain_12, 1);
+    }
+}
+
+static void OLED_RenderConfirm() {
+    unsigned short width;
+    unsigned short height;
+
+    OLED_RenderEditFrame("Confirm?");
+
+    char *value;
+
+    if (oledState.EditInfo.SelectedValue == 0) {
+        value = "No";
+    } else {
+        value = "Yes";
+    }
+
+    SSD1306_MeasureString(value, 64, &width, &height, &Dialog_plain_12);
+    SSD1306_DrawString(value, 64, 64 - width / 2, 50, &Dialog_plain_12, 1);
 }
 
 static void OLED_NavigateMenu(OLED_Buttons btn) {
@@ -467,6 +488,9 @@ static void OLED_NavigateMenu(OLED_Buttons btn) {
                     oledState.ActiveScreen->ScreenParameter = oledTransitionMap[i].Parameter;
                     oledState.SelectedMenuItem = 0;
                     oledState.EditInfo.Changed = 0;
+                    oledState.EditInfo.SelectedValue = 0;
+                    oledState.OnNavigate = NULL;
+                    oledState.OnRender = NULL;
 
                     if (oledState.ActiveScreen->OnInit != NULL) {
                         oledState.ActiveScreen->OnInit();
@@ -484,6 +508,8 @@ static void OLED_NavigateMenu(OLED_Buttons btn) {
                 if (oledTransitionMap[i].Parameter == oledState.ActiveScreen->ScreenParameter) {
                     oledState.ActiveScreen = oledTransitionMap[i].Source;
                     oledState.SelectedMenuItem = oledTransitionMap[i].MenuItem;
+                    oledState.OnRender = NULL;
+                    oledState.OnNavigate = NULL;
 
                     if (oledState.SelectedMenuItem < 0) {
                         oledState.SelectedMenuItem = 0;
@@ -501,10 +527,162 @@ static void OLED_NavigateMenu(OLED_Buttons btn) {
     }
 }
 
-static void OLED_NavigateEdit(OLED_Buttons btn) {
-    OLED_NavigateMenu(btn);
+static void OLED_NavigateValueSelect(OLED_Buttons btn) {
+    OLED_EditFieldMetadata *field = &oledState.EditInfo.Fields[oledState.SelectedMenuItem];
+
+    switch (btn) {
+    case OLEDB_Confirm:
+        if (field->Mode == OLEDE_List) {
+            field->ValueIndex = oledState.EditInfo.SelectedValue;
+        } else {
+            field->Value[oledState.EditInfo.CursorPosition] = oledState.EditInfo.SelectedValue;
+        }
+
+        oledState.EditInfo.Changed = 1;
+
+        // No break, return to previous screen as if back was pressed
+    case OLEDB_Back:
+        oledState.OnRender = OLED_RenderEditSelect;
+        oledState.OnNavigate = OLED_NavigateEditSelect;
+
+        if (field->Mode == OLEDE_List) {
+            oledState.OnRender = NULL;
+            oledState.OnNavigate = NULL;
+        }
+        break;
+    case OLEDB_Up:
+        oledState.EditInfo.SelectedValue++;
+        break;
+    case OLEDB_Down:
+        oledState.EditInfo.SelectedValue--;
+        break;
+    }
+
+    char min = 0x00;
+    char max = 0xFF;
+
+    switch (field->Mode) {
+    case OLEDE_List:
+        min = 0;
+        max = field->ValueListSize - 1;
+        break;
+    case OLEDE_Int:
+    case OLEDE_Ip:
+        min = '0';
+        max = '9';
+        break;
+    case OLEDE_Text:
+        min = ' ';
+        max = 'z';
+        break;
+    }
+
+    if (oledState.EditInfo.SelectedValue < min)
+        oledState.EditInfo.SelectedValue = max;
+
+    if (oledState.EditInfo.SelectedValue > max)
+        oledState.EditInfo.SelectedValue = min;
 }
 
+static void OLED_NavigateEditSelect(OLED_Buttons btn) {
+    OLED_EditFieldMetadata *field = &oledState.EditInfo.Fields[oledState.SelectedMenuItem];
+
+    switch (btn) {
+    case OLEDB_Confirm:
+        if (field->Mode == OLEDE_Ip && (oledState.EditInfo.CursorPosition % 4) == 3)
+            break;
+
+        oledState.OnRender = OLED_RenderValueSelect;
+        oledState.OnNavigate = OLED_NavigateValueSelect;
+        oledState.EditInfo.SelectedValue = field->Value[oledState.EditInfo.CursorPosition];
+
+        break;
+    case OLEDB_Back:
+        oledState.OnRender = NULL;
+        oledState.OnNavigate = NULL;
+
+        if (field->Mode == OLEDE_Text) {
+            for (int i = field->FieldLength - 1; i >= 0; i--) {
+                if (field->Value[i] == ' ') {
+                    field->Value[i] = 0;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        break;
+    case OLEDB_Up:
+        oledState.EditInfo.CursorPosition--;
+        break;
+    case OLEDB_Down:
+        oledState.EditInfo.CursorPosition++;
+        break;
+    }
+
+    oledState.EditInfo.CursorPosition = (oledState.EditInfo.CursorPosition + field->FieldLength) % field->FieldLength;
+}
+
+static void OLED_NavigateEdit(OLED_Buttons btn) {
+    OLED_EditFieldMetadata *field = &oledState.EditInfo.Fields[oledState.SelectedMenuItem];
+
+    if (btn == OLEDB_Confirm) {
+        if (field->Mode != OLEDE_List) {
+            oledState.OnRender = OLED_RenderEditSelect;
+            oledState.OnNavigate = OLED_NavigateEditSelect;
+            oledState.EditInfo.CursorPosition = 0;
+
+            if (field->Mode == OLEDE_Text) {
+                for (int i = 0; i < field->FieldLength; i++) {
+                    if (field->Value[i] == 0)
+                        field->Value[i] = ' ';
+                }
+            }
+        } else {
+            oledState.OnRender = OLED_RenderValueSelect;
+            oledState.OnNavigate = OLED_NavigateValueSelect;
+            oledState.EditInfo.SelectedValue = field->ValueIndex;
+        }
+    } else {
+        if (btn == OLEDB_Back && oledState.EditInfo.Changed) {
+            oledState.OnRender = OLED_RenderConfirm;
+            oledState.OnNavigate = OLED_NavigateConfirm;
+            oledState.EditInfo.SelectedValue = 0;
+        } else {
+            OLED_NavigateMenu(btn);
+        }
+    }
+}
+
+static void OLED_NavigateConfirm(OLED_Buttons btn) {
+    switch (btn) {
+    case OLEDB_Confirm:
+        if (oledState.ActiveScreen->OnConfirm != NULL) {
+            oledState.ActiveScreen->OnConfirm();
+        }
+
+        OLED_NavigateMenu(OLEDB_Back);
+        break;
+    case OLEDB_Back:
+        if (oledState.OnRender == NULL) {
+            OLED_NavigateMenu(OLEDB_Back);
+        } else {
+            oledState.OnNavigate = NULL;
+            oledState.OnRender = NULL;
+        }
+        break;
+    case OLEDB_Up:
+    case OLEDB_Down:
+        oledState.EditInfo.SelectedValue = (oledState.EditInfo.SelectedValue + 1) % 2;
+        break;
+    }
+}
+
+/*
+--------------------------------------------------------------
+-- Initialize Fields for Editing
+--------------------------------------------------------------
+*/
 static void OLED_SetFieldIp(unsigned char i, ip_addr_t *addr) {
     char ip[4] = {
         ip4_addr1(addr),
@@ -514,8 +692,19 @@ static void OLED_SetFieldIp(unsigned char i, ip_addr_t *addr) {
 
     oledState.EditInfo.Fields[i].Disabled = 0;
     oledState.EditInfo.Fields[i].Mode = OLEDE_Ip;
+    oledState.EditInfo.Fields[i].FieldLength = 15;
 
     snprintf(oledState.EditInfo.Fields[i].Value, 16, "%03u.%03u.%03u.%03u", ip[0], ip[1], ip[2], ip[3]);
+}
+
+static void OLED_GetFieldIp(unsigned char i, ip_addr_t *addr) {
+    // Need to parse the IP block by block, because a leading 0 indicates base 8 in ipaddr_aton
+    OLED_EditFieldMetadata *field = &oledState.EditInfo.Fields[i];
+    field->Value[3] = 0;
+    field->Value[7] = 0;
+    field->Value[11] = 0;
+
+    IP4_ADDR(addr, atoi(field->Value), atoi(&field->Value[4]), atoi(&field->Value[8]), atoi(&field->Value[12]));
 }
 
 static void OLED_SetFieldList(unsigned char i, unsigned char value, char **list, unsigned char listSize) {
@@ -526,11 +715,16 @@ static void OLED_SetFieldList(unsigned char i, unsigned char value, char **list,
     oledState.EditInfo.Fields[i].ValueListSize = listSize;
 }
 
-static void OLED_SetFieldInt(unsigned char i, short value, short min, short max, char digits) {
+static char OLED_GetFieldList(unsigned char i) {
+    return oledState.EditInfo.Fields[i].ValueIndex;
+}
+
+static void OLED_SetFieldInt(unsigned char i, short value, short min, short max, signed char digits) {
     oledState.EditInfo.Fields[i].Disabled = 0;
     oledState.EditInfo.Fields[i].Mode = OLEDE_Int;
     oledState.EditInfo.Fields[i].Minimum = min;
     oledState.EditInfo.Fields[i].Maximum = max;
+    oledState.EditInfo.Fields[i].FieldLength = digits;
 
     if (digits < 0) {
         snprintf(oledState.EditInfo.Fields[i].Value, 15, "%d", value);
@@ -541,14 +735,25 @@ static void OLED_SetFieldInt(unsigned char i, short value, short min, short max,
     }
 }
 
+static short OLED_GetFieldInt(unsigned char i) {
+    return atoi(oledState.EditInfo.Fields[i].Value);
+}
+
 static void OLED_SetFieldStr(unsigned char i, char *str, short maxLen) {
     if (maxLen < 0)
         maxLen = 64;
 
     oledState.EditInfo.Fields[i].Disabled = 0;
     oledState.EditInfo.Fields[i].Mode = OLEDE_Text;
-    oledState.EditInfo.Fields[i].Maximum = maxLen;
+    oledState.EditInfo.Fields[i].FieldLength = maxLen;
     strncpy(oledState.EditInfo.Fields[i].Value, str, maxLen);
+}
+
+static void OLED_GetFieldStr(unsigned char i, char *str, unsigned short maxLen) {
+    if (maxLen > 64)
+        return;
+
+    strncpy(str, oledState.EditInfo.Fields[i].Value, maxLen);
 }
 
 static void OLED_InitPort() {
@@ -559,7 +764,7 @@ static void OLED_InitPort() {
     OLED_SetFieldList(2, cfg->PortDirection == USART_OUTPUT ? 0 : 1, &opt_portDir, 2);
     OLED_SetFieldInt(3, cfg->Universe, 0, 32000, 5);
     OLED_SetFieldInt(4, cfg->AcnPriority, 0, 254, 3);
-    OLED_SetFieldList(5, (cfg->PortFlags & PORT_FLAG_INDISABLED) != 0 ? 0 : 1, &opt_disabled, 2);
+    OLED_SetFieldList(5, (cfg->PortFlags & PORT_FLAG_INDISABLED) != 0 ? 0 : 1, &opt_disabled, 2); // flipped
     OLED_SetFieldList(6, (cfg->PortFlags & PORT_FLAG_RDM) != 0 ? 1 : 0, &opt_disabled, 2);
     OLED_SetFieldList(7, (cfg->PortFlags & PORT_FLAG_SINGLE) != 0 ? 1 : 0, &opt_portMode, 2);
     OLED_SetFieldList(8, cfg->FailoverMode, &opt_failover, 4);
@@ -584,4 +789,57 @@ static void OLED_InitFirmware() {
 
     oledState.EditInfo.Fields[0].Disabled = 1;
     oledState.EditInfo.Fields[1].Disabled = 1;
+}
+
+static void OLED_ConfirmPort() {
+    ARTNET_CONFIG *cfg = &Config_GetActive()->ArtNet[oledState.ActiveScreen->ScreenParameter];
+
+    OLED_GetFieldStr(0, cfg->ShortName, 18);
+    OLED_GetFieldStr(1, cfg->LongName, 64);
+    if (OLED_GetFieldList(2)) {
+        cfg->PortDirection = USART_INPUT;
+    } else {
+        cfg->PortDirection = USART_OUTPUT;
+    }
+    cfg->Universe = OLED_GetFieldInt(3);
+    cfg->AcnPriority = OLED_GetFieldInt(4);
+    if (OLED_GetFieldList(5)) { // flipped
+        cfg->PortFlags &= ~PORT_FLAG_INDISABLED;
+    } else {
+        cfg->PortFlags |= PORT_FLAG_INDISABLED;
+    }
+    if (OLED_GetFieldList(6)) {
+        cfg->PortFlags |= PORT_FLAG_RDM;
+    } else {
+        cfg->PortFlags &= ~PORT_FLAG_RDM;
+    }
+    if (OLED_GetFieldList(7)) {
+        cfg->PortFlags |= PORT_FLAG_SINGLE;
+    } else {
+        cfg->PortFlags &= ~PORT_FLAG_SINGLE;
+    }
+    cfg->FailoverMode = OLED_GetFieldList(8);
+
+    Config_ApplyArtNet();
+    Config_Store();
+}
+
+static void OLED_ConfirmIp() {
+    CONFIG *cfg = Config_GetActive();
+
+    cfg->Mode = OLED_GetFieldList(0);
+    OLED_GetFieldIp(1, &cfg->StaticIp);
+    OLED_GetFieldIp(2, &cfg->StaticSubnet);
+    OLED_GetFieldIp(3, &cfg->StaticGateway);
+    cfg->DhcpServerEnable = OLED_GetFieldList(4);
+    OLED_GetFieldIp(5, &cfg->DhcpServerSelf);
+    OLED_GetFieldIp(6, &cfg->DhcpServerClient);
+    OLED_GetFieldIp(7, &cfg->DhcpServerSubnet);
+
+    Config_ApplyNetwork();
+    Config_Store();
+}
+
+static void OLED_ConfirmReset() {
+    Config_Reset();
 }

@@ -234,9 +234,9 @@ void SSD1306_DrawChar(char chr, unsigned char left, unsigned char top, const GFX
     }
 }
 
-void SSD1306_DrawString(const char *str, unsigned short len, unsigned char x, unsigned char y, const GFXfont *font, unsigned char fill) {
-    unsigned char posX = x;
-    unsigned char posY = y;
+void SSD1306_DrawString(const char *str, unsigned short len, unsigned short x, unsigned short y, const GFXfont *font, unsigned char fill) {
+    unsigned short posX = x;
+    unsigned short posY = y;
 
     for (int i = 0; i < len; i++) {
         if (str[i] == 0) {
@@ -253,7 +253,7 @@ void SSD1306_DrawString(const char *str, unsigned short len, unsigned char x, un
     }
 }
 
-void SSD1306_DrawStringHighlighted(const char *str, unsigned short len, unsigned int selectedPos, unsigned char x, unsigned char y, const GFXfont *font, unsigned char fill) {
+void SSD1306_DrawStringHighlighted(const char *str, unsigned short len, unsigned int selectedPos, unsigned short x, unsigned short y, const GFXfont *font, unsigned char fill) {
     SSD1306_DrawString(str, len, x, y, font, fill);
 
     if (len <= selectedPos) {
@@ -294,10 +294,8 @@ void SSD1306_MeasureString(const char *str, unsigned short len, unsigned short *
 
             lineMax += glyph->xAdvance;
 
-            if (str[i] != ' ') {
-                if (lineMax > *width) {
-                    *width = lineMax;
-                }
+            if (lineMax > *width) {
+                *width = lineMax;
             }
         }
     }

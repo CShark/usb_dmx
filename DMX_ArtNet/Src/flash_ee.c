@@ -148,6 +148,15 @@ void EE_WriteConfig(CONFIG *config) {
     }
 }
 
+void EE_ClearConfig() {
+    EE_UnlockFlash();
+
+    EE_ClearConfigPage();
+    EE_ClearFailoverPage();
+
+    EE_LockFlash();
+}
+
 void EE_ReadFailover(unsigned char *buffer, int idx) {
     if (idx >= 0 && idx < 4) {
         memcpy(buffer, ((unsigned char *)FlashFailoverPage) + idx * 512, 512);

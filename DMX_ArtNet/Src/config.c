@@ -1,4 +1,5 @@
 #include "config.h"
+#include "dmx_usart.h"
 #include "eth/dhcp_server.h"
 #include "flash_ee.h"
 #include "lwip/apps/mdns.h"
@@ -29,11 +30,10 @@ CONFIG *Config_GetActive() {
 }
 
 void Config_Reset() {
-    Config_ResetIp();
-}
-
-void Config_ResetIp() {
     activeConfig = Config_GetDefault();
+    EE_ClearConfig();
+    Config_ApplyArtNet();
+    Config_ApplyNetwork();
 }
 
 void Config_DhcpServer(char enable, ip_addr_t host, ip_addr_t client, ip_addr_t subnet) {
@@ -90,7 +90,16 @@ void Config_ApplyNetwork() {
     }
 
     mdns_resp_netif_settings_changed(netif);
-    Config_Store();
+}
+
+void Config_ApplyArtNet() {
+    for (int i = 0; i < 4; i++) {
+        USART_AlterPortFlags(i, PORT_FLAG_INDISABLED, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_INDISABLED);
+        USART_AlterPortFlags(i, PORT_FLAG_RDM, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_RDM);
+        USART_AlterPortFlags(i, PORT_FLAG_SINGLE, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_SINGLE);
+
+        USART_ChangePortDirection(i, activeConfig.ArtNet[i].PortDirection);
+    }
 }
 
 void Config_Store() {

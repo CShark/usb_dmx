@@ -15,8 +15,8 @@ void SSD1306_DrawBorder(unsigned char left, unsigned char top, unsigned char wid
 void SSD1306_DrawBitmap(const unsigned char *buffer, unsigned short len, unsigned char left, unsigned char top, unsigned char width, unsigned char height);
 void SSD1306_DrawPixel(unsigned char x, unsigned char y, unsigned char fill);
 void SSD1306_DrawChar(char chr, unsigned char x, unsigned char y, const GFXfont *font, unsigned char fill);
-void SSD1306_DrawString(const char *str, unsigned short len, unsigned char x, unsigned char y, const GFXfont *font, unsigned char fill);
-void SSD1306_DrawStringHighlighted(const char *str, unsigned short len, unsigned int selectedPos, unsigned char x, unsigned char y, const GFXfont *font, unsigned char fill);
+void SSD1306_DrawString(const char *str, unsigned short len, unsigned short x, unsigned short y, const GFXfont *font, unsigned char fill);
+void SSD1306_DrawStringHighlighted(const char *str, unsigned short len, unsigned int selectedPos, unsigned short x, unsigned short y, const GFXfont *font, unsigned char fill);
 
 void SSD1306_MeasureString(const char *str, unsigned short len, unsigned short *width, unsigned short *height, const GFXfont *font);
 

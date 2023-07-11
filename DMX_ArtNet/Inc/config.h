@@ -50,7 +50,6 @@ void Config_Init(struct netif *net, const unsigned char *portDirection);
 
 void Config_Reset();
 
-void Config_ResetIp();
 void Config_SetMode(CONFIG_IP_MODE mode);
 void Config_DhcpServer(char enable, ip_addr_t host, ip_addr_t client, ip_addr_t subnet);
 void Config_SetIp(const unsigned char *ip);
@@ -60,6 +59,7 @@ void Config_SetNetmask(const unsigned char *net);
 CONFIG *Config_GetActive();
 struct netif* Config_GetNetif();
 void Config_ApplyNetwork();
+void Config_ApplyArtNet();
 void Config_Store();
 
 void Config_StoreFailsafeScene(const unsigned char *buffer, char art_port);

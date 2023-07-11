@@ -33,6 +33,7 @@ typedef struct {
     void (*OnRender)();
     void (*OnNavigate)(OLED_Buttons btn);
     void (*OnInit)();
+    void (*OnConfirm)();
 
     char ScreenMetadata;
     char ScreenParameter;
@@ -47,7 +48,7 @@ typedef struct {
     union {
         char Value[64];
         struct {
-            char ValueIndex;
+            signed char ValueIndex;
             char **ValueList;
             unsigned char ValueListSize;
         };
@@ -55,6 +56,7 @@ typedef struct {
 
     short Minimum;
     short Maximum;
+    char FieldLength;
     unsigned char Disabled;
 } OLED_EditFieldMetadata;
 
@@ -62,6 +64,8 @@ typedef struct {
     OLED_EditFieldMetadata Fields[10];
 
     unsigned char Changed;
+    signed char CursorPosition;
+    signed char SelectedValue;
 } OLED_EditMetadata;
 
 typedef struct {
@@ -78,7 +82,10 @@ typedef struct {
 
     OLED_Buttons LastButton;
 
-    short SelectedMenuItem;
+    void (*OnRender)();
+    void (*OnNavigate)(OLED_Buttons btn);
+
+    signed char SelectedMenuItem;
 } OLED_State;
 
 void OLED_Init();
