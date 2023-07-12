@@ -59,7 +59,7 @@ The total cost for this device is currently aproximately 90€. You can save mon
 
 | Amount | Type | Footprint |
 |-|-|-|
-| 1 | OLED-Display | 0.96" with I²C |
+| 1 | OLED-Display | 0.96" with I²C and SSD1306 compatible driver |
 | 1 | FFC Connector | 1x10, Pitch 1mm |
 | 2 | Resistor | 4K7 | 0603 |
 | 4 | Switch | Through Hole, Height 10mm |

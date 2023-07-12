@@ -79,6 +79,7 @@ void SSD1306_Init(void (*i2c_write)(const unsigned char *buffer, unsigned short 
     // Minimal delay to allow SSD1306 bootup
     delay_ms(100);
     i2c_send(oled_init, sizeof(oled_init), SSD1306_SendBuffer);
+    delay_ms(100);
 }
 
 void SSD1306_SendBuffer() {

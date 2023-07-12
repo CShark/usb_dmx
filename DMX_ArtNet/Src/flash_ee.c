@@ -1,11 +1,12 @@
 #include "flash_ee.h"
 
 /*
-Category2 Device (128KB, no dual bank)
+Category3 Device (512KB, dual bank)
 Virt-Addr | Value
 */
-#define PAGE_SIZE 2048
-#define PAGE_NUM 62
+//#define PAGE_SIZE 2048
+#define PAGE_SIZE 4096
+#define PAGE_NUM 126
 #define FLASH_OFFSET (volatile unsigned int *)0x08000000
 
 static volatile unsigned int *FlashConfigPage = FLASH_OFFSET + (PAGE_NUM * PAGE_SIZE);

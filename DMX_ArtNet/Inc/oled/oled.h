@@ -45,6 +45,7 @@ typedef struct {
 typedef struct {
     OLED_EditMode Mode;
 
+    char ValueCopy[64];
     union {
         char Value[64];
         struct {
@@ -84,11 +85,13 @@ typedef struct {
 
     void (*OnRender)();
     void (*OnNavigate)(OLED_Buttons btn);
+    unsigned int OverlayTimeout;
 
     signed char SelectedMenuItem;
 } OLED_State;
 
 void OLED_Init();
 void OLED_Tick();
+void OLED_ForceRefresh();
 
 #endif

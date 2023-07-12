@@ -1,5 +1,6 @@
 #include "config.h"
 #include "dmx_usart.h"
+#include "oled/oled.h"
 #include "eth/dhcp_server.h"
 #include "flash_ee.h"
 #include "lwip/apps/mdns.h"
@@ -90,6 +91,8 @@ void Config_ApplyNetwork() {
     }
 
     mdns_resp_netif_settings_changed(netif);
+
+    OLED_ForceRefresh();
 }
 
 void Config_ApplyArtNet() {

@@ -21,6 +21,7 @@ static void OLED_NavigateEditSelect(OLED_Buttons btn);
 static void OLED_RenderEditSelect();
 static void OLED_NavigateConfirm(OLED_Buttons btn);
 static void OLED_RenderConfirm();
+static void OLED_RenderInvalidValue();
 
 static void OLED_InitPort();
 static void OLED_InitIp();
@@ -29,6 +30,8 @@ static void OLED_InitFirmware();
 static void OLED_ConfirmPort();
 static void OLED_ConfirmIp();
 static void OLED_ConfirmReset();
+
+static char OLED_ValidateFieldValue(unsigned char i);
 
 static const unsigned char *pending_buffer;
 static unsigned short pending_len;
@@ -40,8 +43,10 @@ static unsigned int lastInputTick;
 static unsigned int lastInputRepeatTick;
 static unsigned int dfuTimer;
 static unsigned int inputRepeatTimer;
+static unsigned char forceRefresh = 0;
 
 static char *opt_disabled[] = {"Disabled", "Enabled"};
+static char *opt_yesno[] = {"No", "Yes"};
 static char *opt_ipMode[] = {"AutoIP", "Static", "DHCP"};
 static char *opt_portDir[] = {"Output", "Input"};
 static char *opt_portMode[] = {"Cont", "Delta"};
@@ -58,7 +63,7 @@ static char *listItems[] = {
     "Firmware Info",
     "Reset Config",
     "Reboot DFU",
-    // Ports - 9
+    // Ports - 10
     "Name",
     "Description",
     "Direction",
@@ -68,6 +73,7 @@ static char *listItems[] = {
     "RDM",
     "Port Mode",
     "Failover",
+    "Rec Failover",
     // IP Config - 8
     "Mode",
     "Static IP",
@@ -106,21 +112,21 @@ static OLED_ScreenData oledScreens[] = {
         .OnInit = OLED_InitPort,
         .OnConfirm = OLED_ConfirmPort,
         .ListItems = &listItems[8],
-        .ListSize = 9,
+        .ListSize = 10,
     },
     {
         .OnRender = OLED_RenderEdit,
         .OnNavigate = OLED_NavigateEdit,
         .OnInit = OLED_InitIp,
         .OnConfirm = OLED_ConfirmIp,
-        .ListItems = &listItems[8 + 9],
+        .ListItems = &listItems[8 + 10],
         .ListSize = 8,
     },
     {
         .OnRender = OLED_RenderEdit,
         .OnNavigate = OLED_NavigateMenu,
         .OnInit = OLED_InitFirmware,
-        .ListItems = &listItems[8 + 9 + 8],
+        .ListItems = &listItems[8 + 10 + 8],
         .ListSize = 2,
     },
     {
@@ -180,8 +186,6 @@ void OLED_Init() {
 }
 
 void OLED_Tick() {
-    char forceRefresh = 0;
-
     if (oledState.State == OLEDM_Offline) {
         return;
     }
@@ -204,6 +208,13 @@ void OLED_Tick() {
         if (sys_now() - bootTimer > 2500) {
             oledState.ActiveScreen = &oledScreens[1];
             forceRefresh = 1;
+        }
+    }
+
+    if (oledState.OverlayTimeout != 0) {
+        if (sys_now() - oledState.OverlayTimeout > 5000) {
+            oledState.OverlayTimeout = 0;
+            oledState.OnRender = NULL;
         }
     }
 
@@ -230,7 +241,10 @@ void OLED_Tick() {
 
         if (btn != oledState.LastButton || repeat) {
             if (oledState.State == OLEDM_Active) {
-                if (oledState.OnNavigate != NULL) {
+                if (oledState.OverlayTimeout != 0) {
+                    oledState.OnRender = NULL;
+                    oledState.OverlayTimeout = 0;
+                } else if (oledState.OnNavigate != NULL) {
                     oledState.OnNavigate(btn);
                 } else if (oledState.ActiveScreen->OnNavigate != NULL) {
                     oledState.ActiveScreen->OnNavigate(btn);
@@ -271,6 +285,12 @@ void OLED_Tick() {
         }
         lastTick = sys_now();
     }
+
+    forceRefresh = 0;
+}
+
+void OLED_ForceRefresh() {
+    forceRefresh = 1;
 }
 
 static void OLED_InitSendData(const unsigned char *buffer, unsigned short len, void (*callback)()) {
@@ -469,6 +489,16 @@ static void OLED_RenderConfirm() {
     SSD1306_DrawString(value, 64, 64 - width / 2, 50, &Dialog_plain_12, 1);
 }
 
+static void OLED_RenderInvalidValue() {
+    unsigned short width;
+    unsigned short height;
+
+    char *value = "Invalid Value";
+
+    SSD1306_MeasureString(value, 64, &width, &height, &Dialog_plain_12);
+    SSD1306_DrawString(value, 64, 64 - width / 2, 30 + height / 2, &Dialog_plain_12, 1);
+}
+
 static void OLED_NavigateMenu(OLED_Buttons btn) {
     switch (btn) {
     case OLEDB_Up:
@@ -598,6 +628,14 @@ static void OLED_NavigateEditSelect(OLED_Buttons btn) {
 
         break;
     case OLEDB_Back:
+        if (OLED_ValidateFieldValue(oledState.SelectedMenuItem)) {
+            oledState.OverlayTimeout = sys_now();
+            if (oledState.OverlayTimeout == 0)
+                oledState.OverlayTimeout--;
+            oledState.OnRender = OLED_RenderInvalidValue;
+            memcpy(field->Value, field->ValueCopy, 64);
+        }
+
         oledState.OnRender = NULL;
         oledState.OnNavigate = NULL;
 
@@ -643,6 +681,8 @@ static void OLED_NavigateEdit(OLED_Buttons btn) {
             oledState.OnNavigate = OLED_NavigateValueSelect;
             oledState.EditInfo.SelectedValue = field->ValueIndex;
         }
+
+        memcpy(field->ValueCopy, field->Value, 64);
     } else {
         if (btn == OLEDB_Back && oledState.EditInfo.Changed) {
             oledState.OnRender = OLED_RenderConfirm;
@@ -657,8 +697,10 @@ static void OLED_NavigateEdit(OLED_Buttons btn) {
 static void OLED_NavigateConfirm(OLED_Buttons btn) {
     switch (btn) {
     case OLEDB_Confirm:
-        if (oledState.ActiveScreen->OnConfirm != NULL) {
-            oledState.ActiveScreen->OnConfirm();
+        if (oledState.EditInfo.SelectedValue == 1) {
+            if (oledState.ActiveScreen->OnConfirm != NULL) {
+                oledState.ActiveScreen->OnConfirm();
+            }
         }
 
         OLED_NavigateMenu(OLEDB_Back);
@@ -675,6 +717,35 @@ static void OLED_NavigateConfirm(OLED_Buttons btn) {
     case OLEDB_Down:
         oledState.EditInfo.SelectedValue = (oledState.EditInfo.SelectedValue + 1) % 2;
         break;
+    }
+}
+
+static char OLED_ValidateFieldValue(unsigned char i) {
+    OLED_EditFieldMetadata *field = &oledState.EditInfo.Fields[i];
+
+    switch (field->Mode) {
+    case OLEDE_Ip: {
+        unsigned short part;
+        for (int i = 0; i < 4; i++) {
+            part = atoi(&field->Value[i * 4]);
+            if (part > 255) {
+                return 1;
+            }
+        }
+
+        return 0;
+    }
+    case OLEDE_Int: {
+        short value = atoi(field->Value);
+
+        if (value < field->Minimum || value > field->Maximum) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+    default:
+        return 0;
     }
 }
 
@@ -700,10 +771,6 @@ static void OLED_SetFieldIp(unsigned char i, ip_addr_t *addr) {
 static void OLED_GetFieldIp(unsigned char i, ip_addr_t *addr) {
     // Need to parse the IP block by block, because a leading 0 indicates base 8 in ipaddr_aton
     OLED_EditFieldMetadata *field = &oledState.EditInfo.Fields[i];
-    field->Value[3] = 0;
-    field->Value[7] = 0;
-    field->Value[11] = 0;
-
     IP4_ADDR(addr, atoi(field->Value), atoi(&field->Value[4]), atoi(&field->Value[8]), atoi(&field->Value[12]));
 }
 
@@ -762,12 +829,13 @@ static void OLED_InitPort() {
     OLED_SetFieldStr(0, cfg->ShortName, 18);
     OLED_SetFieldStr(1, cfg->LongName, 64);
     OLED_SetFieldList(2, cfg->PortDirection == USART_OUTPUT ? 0 : 1, &opt_portDir, 2);
-    OLED_SetFieldInt(3, cfg->Universe, 0, 32000, 5);
+    OLED_SetFieldInt(3, cfg->Universe, 0, 32767, 5);
     OLED_SetFieldInt(4, cfg->AcnPriority, 0, 254, 3);
     OLED_SetFieldList(5, (cfg->PortFlags & PORT_FLAG_INDISABLED) != 0 ? 0 : 1, &opt_disabled, 2); // flipped
     OLED_SetFieldList(6, (cfg->PortFlags & PORT_FLAG_RDM) != 0 ? 1 : 0, &opt_disabled, 2);
     OLED_SetFieldList(7, (cfg->PortFlags & PORT_FLAG_SINGLE) != 0 ? 1 : 0, &opt_portMode, 2);
     OLED_SetFieldList(8, cfg->FailoverMode, &opt_failover, 4);
+    OLED_SetFieldList(9, 0, &opt_yesno, 2);
 }
 
 static void OLED_InitIp() {
@@ -819,6 +887,10 @@ static void OLED_ConfirmPort() {
         cfg->PortFlags &= ~PORT_FLAG_SINGLE;
     }
     cfg->FailoverMode = OLED_GetFieldList(8);
+
+    if(OLED_GetFieldList(9)) {
+        Config_StoreFailsafeScene(USART_GetDmxBuffer(oledState.ActiveScreen->ScreenParameter), oledState.ActiveScreen->ScreenParameter);
+    }
 
     Config_ApplyArtNet();
     Config_Store();

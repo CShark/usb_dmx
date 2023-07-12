@@ -72,6 +72,7 @@ int main(void) {
 
     unsigned int last_inputTick = 0;
     unsigned int last_forcedInputTick = 0;
+    unsigned int resetTimer = 0;
 
     while (1) {
         ncm_netif_poll(&ncm_if);
@@ -92,6 +93,20 @@ int main(void) {
         ArtNet_TimeoutTick();
         httpc_timeout();
         OLED_Tick();
+
+        // Reset button
+        if (GPIOA->IDR & (1 << 5)) {
+            if (resetTimer != 0) {
+                if (sys_now() - resetTimer > 5000) {
+                    Config_Reset();
+                    resetTimer = 0;
+                }
+            } else {
+                resetTimer = sys_now();
+            }
+        } else {
+            resetTimer = 0;
+        }
     }
 }
 
