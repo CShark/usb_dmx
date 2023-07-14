@@ -76,7 +76,7 @@ The total cost for this device is currently aproximately 90€. You can save mon
 | 4 | XLR Connector | An individual mix of Female and Male XLR 3- and 5-Pin connectors, depending on your needs |
 | 9 | Screws | M2, Length 15mm, Countersink |
 | 9 | Nuts | M2 |
-| 1 | Acrylic Window | To be measured |
+| 1 | Acrylic Window | 15mm x 25mm |
 | 1 | Spacer | M2, Length 6mm |
 | 1 | Mainboard PCB | | 
 | 1 | Display PCB | |
