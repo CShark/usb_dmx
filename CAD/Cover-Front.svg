@@ -7,9 +7,9 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="84.048mm"
-   height="26.948000000000004mm"
-   viewBox="0 0 84.048 26.948000000000004"
+   width="80.988mm"
+   height="26.887999999999998mm"
+   viewBox="0 0 80.988 26.887999999999998"
    version="1.1"
    id="svg25"
    sodipodi:docname="Cover-Front.svg"
@@ -40,101 +40,102 @@
      inkscape:window-height="1369"
      id="namedview27"
      showgrid="false"
-     inkscape:zoom="4.407204"
-     inkscape:cx="206.15413"
-     inkscape:cy="14.167111"
+     inkscape:zoom="3.2341105"
+     inkscape:cx="180.85057"
+     inkscape:cy="140.40866"
      inkscape:window-x="-8"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
-     inkscape:current-layer="Face" />
+     inkscape:current-layer="svg25" />
   <g
-     id="Face"
-     transform="translate(28.724000,26.124000) scale(1,-1)">
-    <circle
-       cx="-16.5"
-       cy="12.8"
-       r="11.2"
-       stroke="#191919"
-       stroke-width="0.35 px"
-       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
-       id="circle2" />
+     id="Sketch"
+     transform="translate(25.694000,26.094000) scale(1,-1)"
+     style="stroke:none;fill:#000000;fill-opacity:1">
     <path
-       id="Face_f0001"
-       d="M 54.5 25.3 L 54.5 10.3 L 29.5 10.3 L 29.5 25.3 L 54.5 25.3 Z "
-       stroke="#191919"
+       id="Sketch_w0000"
+       d="M 25.5 0.0 L 16.0 0.0 L 16.0 4.0 L 25.5 4.0 L 25.5 0.0 "
+       stroke="#000000"
        stroke-width="0.35 px"
        style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none" />
-    <path
-       id="Face_f0002"
-       d="M 16.0 0.0 L 16.0 4.0 L 25.5 4.0 L 25.5 0.0 L 16.0 0.0 Z "
-       stroke="#191919"
-       stroke-width="0.35 px"
-       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none" />
-    <circle
-       cx="20.5"
-       cy="22.700000000000003"
-       r="2.0"
-       stroke="#191919"
-       stroke-width="0.35 px"
-       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
-       id="circle6" />
-    <circle
-       cx="8.5"
-       cy="22.700000000000003"
-       r="2.0"
-       stroke="#191919"
-       stroke-width="0.35 px"
-       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
-       id="circle8" />
-    <circle
-       cx="20.5"
-       cy="11.9"
-       r="2.0"
-       stroke="#191919"
-       stroke-width="0.35 px"
-       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
-       id="circle10" />
-    <circle
-       cx="8.5"
-       cy="11.9"
-       r="2.0"
-       stroke="#191919"
-       stroke-width="0.35 px"
-       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
-       id="circle12" />
-    <circle
-       cx="14.5"
-       cy="17.3"
-       r="1.5"
-       stroke="#191919"
-       stroke-width="0.35 px"
-       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
-       id="circle14" />
-    <circle
-       cx="-6.6"
-       cy="22.700000000000003"
-       r="1.5"
-       stroke="#191919"
-       stroke-width="0.35 px"
-       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
-       id="circle16" />
-    <circle
-       cx="-26.4"
-       cy="2.9000000000000012"
-       r="1.5"
-       stroke="#191919"
-       stroke-width="0.35 px"
-       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
-       id="circle18" />
     <circle
        cx="6.1"
        cy="4.0"
        r="1.5"
-       stroke="#191919"
+       stroke="#000000"
        stroke-width="0.35 px"
        style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
-       id="circle20" />
+       id="circle3" />
+    <circle
+       cx="-13.5"
+       cy="12.8"
+       r="11.2"
+       stroke="#000000"
+       stroke-width="0.35 px"
+       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
+       id="circle5" />
+    <circle
+       cx="-23.4"
+       cy="2.900000000000001"
+       r="1.5"
+       stroke="#000000"
+       stroke-width="0.35 px"
+       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
+       id="circle7" />
+    <circle
+       cx="-3.6000000000000005"
+       cy="22.700000000000003"
+       r="1.5"
+       stroke="#000000"
+       stroke-width="0.35 px"
+       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
+       id="circle9" />
+    <circle
+       cx="14.5"
+       cy="17.3"
+       r="1.5"
+       stroke="#000000"
+       stroke-width="0.35 px"
+       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
+       id="circle11" />
+    <circle
+       cx="8.5"
+       cy="22.700000000000003"
+       r="2.0"
+       stroke="#000000"
+       stroke-width="0.35 px"
+       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
+       id="circle13" />
+    <circle
+       cx="8.5"
+       cy="11.9"
+       r="2.0"
+       stroke="#000000"
+       stroke-width="0.35 px"
+       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
+       id="circle15" />
+    <circle
+       cx="20.5"
+       cy="22.700000000000003"
+       r="2.0"
+       stroke="#000000"
+       stroke-width="0.35 px"
+       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
+       id="circle17" />
+    <circle
+       cx="20.5"
+       cy="11.9"
+       r="2.0"
+       stroke="#000000"
+       stroke-width="0.35 px"
+       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;stroke:none;fill-opacity:1"
+       id="circle19" />
+    <path
+       id="Sketch_w0010"
+       d="M 29.5 25.299999999999997 L 54.5 25.299999999999997 L 54.5 10.299999999999997 L 29.5 10.299999999999997 L 29.5 25.299999999999997 "
+       stroke="#000000"
+       stroke-width="0.35 px"
+       style="stroke-width:0.35;stroke-miterlimit:4;stroke-dasharray:none;stroke-linecap:square;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none" />
     <title
-       id="title22">b'Front_Face'</title>
+       id="title22">b'Front'</title>
   </g>
 </svg>
