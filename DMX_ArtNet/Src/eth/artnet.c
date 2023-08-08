@@ -49,6 +49,10 @@ void ArtNet_Init(struct netif *netif) {
         if (config->ArtNet[i].PortFlags & PORT_FLAG_SINGLE) {
             USART_AlterPortFlags(i, PORT_FLAG_SINGLE, 1);
         }
+
+        if(config->ArtNet[i].PortFlags & PORT_FLAG_INDISABLED) {
+            USART_AlterPortFlags(i, PORT_FLAG_INDISABLED, 1);
+        }
     }
 }
 

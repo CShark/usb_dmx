@@ -20,7 +20,6 @@ void Config_Init(struct netif *net, const unsigned char *portDirection) {
     activeConfig = Config_GetDefault();
     EE_ReadConfig(&activeConfig);
     Config_ApplyNetwork();
-    Config_ApplyArtNet();
 }
 
 struct netif *Config_GetNetif() {
