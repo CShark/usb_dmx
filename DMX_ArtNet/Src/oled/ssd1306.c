@@ -197,11 +197,11 @@ void SSD1306_DrawBitmap(const unsigned char *bitmap, unsigned short len, unsigne
     }
 }
 
-void SSD1306_DrawPixel(unsigned char x, unsigned char y, unsigned char fill) {
+void SSD1306_DrawPixel(short x, short y, unsigned char fill) {
     unsigned char page = y / 8;
     unsigned char mask = 1 << (y - page * 8);
 
-    if (x > 128 || y > 64)
+    if (x > 128 || y > 64 || x < 0 || y < 0)
         return;
 
     if (fill)
@@ -210,7 +210,7 @@ void SSD1306_DrawPixel(unsigned char x, unsigned char y, unsigned char fill) {
     buffer[page * 128 + x] = (buffer[page * 128 + x] & ~mask) | (fill & mask);
 }
 
-void SSD1306_DrawChar(char chr, unsigned char left, unsigned char top, const GFXfont *font, unsigned char fill) {
+void SSD1306_DrawChar(char chr, short left, short top, const GFXfont *font, unsigned char fill) {
     GFXglyph *glyph = &font->GlyphMap[chr - font->StartASCII];
 
     if (glyph->Width > 0 && glyph->Height > 0) {
@@ -219,8 +219,8 @@ void SSD1306_DrawChar(char chr, unsigned char left, unsigned char top, const GFX
         unsigned char bit = 0;
         unsigned char bits = 0;
 
-        for (int y = 0; y < glyph->Height; y++) {
-            for (int x = 0; x < glyph->Width; x++) {
+        for (short y = 0; y < glyph->Height; y++) {
+            for (short x = 0; x < glyph->Width; x++) {
                 if (!(bit++ & 7)) {
                     bits = bitmap[bitmapOffset++];
                 }
@@ -235,9 +235,9 @@ void SSD1306_DrawChar(char chr, unsigned char left, unsigned char top, const GFX
     }
 }
 
-void SSD1306_DrawString(const char *str, unsigned short len, unsigned short x, unsigned short y, const GFXfont *font, unsigned char fill) {
-    unsigned short posX = x;
-    unsigned short posY = y;
+void SSD1306_DrawString(const char *str, unsigned short len, short x, short y, const GFXfont *font, unsigned char fill) {
+    short posX = x;
+    short posY = y;
 
     for (int i = 0; i < len; i++) {
         if (str[i] == 0) {
@@ -254,7 +254,7 @@ void SSD1306_DrawString(const char *str, unsigned short len, unsigned short x, u
     }
 }
 
-void SSD1306_DrawStringHighlighted(const char *str, unsigned short len, unsigned int selectedPos, unsigned short x, unsigned short y, const GFXfont *font, unsigned char fill) {
+void SSD1306_DrawStringHighlighted(const char *str, unsigned short len, unsigned int selectedPos, short x, short y, const GFXfont *font, unsigned char fill) {
     SSD1306_DrawString(str, len, x, y, font, fill);
 
     if (len <= selectedPos) {

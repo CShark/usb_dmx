@@ -4,13 +4,13 @@
 Category3 Device (512KB, dual bank)
 Virt-Addr | Value
 */
-//#define PAGE_SIZE 2048
+// #define PAGE_SIZE 2048
 #define PAGE_SIZE 4096
 #define PAGE_NUM 126
-#define FLASH_OFFSET (volatile unsigned int *)0x08000000
+#define FLASH_OFFSET 0x08000000
 
-static volatile unsigned int *FlashConfigPage = FLASH_OFFSET + (PAGE_NUM * PAGE_SIZE);
-static volatile unsigned int *FlashFailoverPage = FLASH_OFFSET + ((PAGE_NUM + 1) * PAGE_SIZE);
+static volatile unsigned int *FlashConfigPage = (volatile unsigned int *)(FLASH_OFFSET + (PAGE_NUM * PAGE_SIZE));
+static volatile unsigned int *FlashFailoverPage = (volatile unsigned int *)(FLASH_OFFSET + ((PAGE_NUM + 1) * PAGE_SIZE));
 static unsigned int currentOffset = -1;
 
 static void EE_ClearConfigPage();
@@ -63,7 +63,7 @@ static void EE_ClearConfigPage() {
 
     FLASH->SR &= ~FLASH_SR_EOP;
 
-    FLASH->CR &= FLASH_CR_PG;
+    FLASH->CR &= ~FLASH_CR_PG;
     currentOffset = 2;
 }
 

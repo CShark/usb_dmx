@@ -12,6 +12,7 @@ static struct netif *artif;
 static short artnet_port = 6454;
 
 static unsigned int artnet_timeout[4];
+static unsigned char artnet_failover_state[4];
 
 static CONFIG *config;
 
@@ -134,7 +135,7 @@ static void ArtNet_SendPollReply(const ip_addr_t *addr, u16_t port, unsigned cha
     reply->NumPorts = UI16_LITTLE_ENDIAN(1);
     reply->PortTypes[0] = config->ArtNet[art_port].PortDirection << 6;
     reply->SwOut[0] = config->ArtNet[art_port].Universe;
-    reply->SwOut[0] = config->ArtNet[art_port].Universe;
+    reply->SwIn[0] = config->ArtNet[art_port].Universe;
 
     reply->BindIndex = art_port;
 
@@ -342,6 +343,7 @@ static void ArtNet_HandleOutput(ArtNet_Dmx *data) {
                 if (uni == config->ArtNet[i].Universe) {
                     USART_SetBuffer(i, data->Data, data->Length);
                     artnet_timeout[i] = sys_now();
+                    artnet_failover_state[i] = 0;
                 }
             }
         }
@@ -402,7 +404,10 @@ void ArtNet_InputTick(char forceTransmit) {
 void ArtNet_TimeoutTick() {
     for (int i = 0; i < 4; i++) {
         if (sys_now() - artnet_timeout[i] > ARTNET_FAILTIMEOUT) {
-            ArtNet_ApplyFailover(i);
+            if (artnet_failover_state[i] == 0) {
+                ArtNet_ApplyFailover(i);
+                artnet_failover_state[i] = 1;
+            }
         }
     }
 }

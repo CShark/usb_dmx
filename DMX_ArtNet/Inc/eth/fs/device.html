@@ -24,7 +24,7 @@
             for (const [key, value] of Object.entries(obj)) {
                 var elem = document.getElementsByName(key)[0];
                 if (elem.type == 'checkbox') {
-                    elem.checked = value;
+                    elem.checked = value == "1" ? 1 : 0;
                 } else if (elem.type == 'radio') {
                     elem = document.querySelector(`input[name='${key}'][value='${value}']`);
                     elem.checked = 1;
@@ -86,6 +86,12 @@
                     <label>IP<input type="text" name="a_ip" readonly></label>
                     <label>Netmask<input type="text" name="a_mask" readonly></label>
                     <label>Gateway<input type="text" name="a_gw" readonly></label>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Firmware</legend>
+                    <label>Version<input type="text" name="f_v" readonly></label>
+                    <label>ArtNET-ID<input type="text" name="f_id" readonly></label>
                 </fieldset>
 
                 <input id="submit" type="submit" value="Apply Settings">

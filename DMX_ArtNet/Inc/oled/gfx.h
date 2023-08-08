@@ -6,8 +6,8 @@ typedef struct {
     unsigned char Width;
     unsigned char Height;
     unsigned char xAdvance;
-    unsigned char OffsetX;
-    unsigned char OffsetY;
+    signed char OffsetX;
+    signed char OffsetY;
 } GFXglyph;
 
 typedef struct {

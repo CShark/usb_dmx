@@ -25,14 +25,20 @@ d_mask:%s
 a_ip:%s
 a_mask:%s
 a_gw:%s
+f_v:%s
+f_id:%u
 */
 
 static const char *artnet_template = "output:%u\nuniverse:%u\nname:%s\ndescription:%s\nacn:%u\ninputdisable:%u\nrdm:%u\ndelta:%u\nfailover:%u";
-static const char *ipconfig_template = "ipmode:%u\ns_ip:%s\ns_mask:%s\ns_gw:%s\ndhcp_en:%u\nd_dev:%s\nd_host:%s\nd_mask:%s\na_ip:%s\na_mask:%s\na_gw:%s";
+static const char *ipconfig_template = "ipmode:%u\ns_ip:%s\ns_mask:%s\ns_gw:%s\ndhcp_en:%u\nd_dev:%s\nd_host:%s\nd_mask:%s\na_ip:%s\na_mask:%s\na_gw:%s\nf_v:%s\nf_id:%u";
 static char file_buffer[300];
 static struct netif *netif;
 static unsigned int reset_timeout = 0;
+static unsigned int apply_timeout = 0;
 static HttpPostData postMetadata;
+
+// 16 key, 64 value, 1x '=', 1x '\0'
+static char post_buffer[16 + 64 + 2];
 
 static void httpc_parsePortConfig(struct pbuf *p);
 static void httpc_recordFailover(struct pbuf *p);
@@ -46,6 +52,13 @@ void httpc_timeout() {
     if (reset_timeout != 0) {
         if ((sys_now() - reset_timeout) > 500) {
             NVIC_SystemReset();
+        }
+    }
+
+    if (apply_timeout != 0) {
+        if ((sys_now() - apply_timeout) > 500) {
+            Config_ApplyNetwork();
+            apply_timeout = 0;
         }
     }
 }
@@ -108,7 +121,9 @@ int fs_open_custom(struct fs_file *file, const char *name) {
                              ip_buffer[5],
                              ip_buffer[6],
                              ip_buffer[7],
-                             ip_buffer[8]);
+                             ip_buffer[8],
+                             FIRMWARE_VER,
+                             FIRMWARE_INT);
 
         file->index = file->len;
         file->data = file_buffer;
@@ -185,7 +200,7 @@ err_t httpd_post_begin(void *connection, const char *uri, const char *http_reque
 
         return ERR_OK;
     } else if (strcmp(uri, "/ip-config") == 0) {
-        postMetadata.redirectTo = "/device";
+        postMetadata.redirectTo = "/device.html";
         snprintf(response_uri, response_uri_len, postMetadata.redirectTo);
 
         postMetadata.postHander = httpc_setIpConfig;
@@ -210,6 +225,10 @@ err_t httpd_post_receive_data(void *connection, struct pbuf *p) {
 
 void httpd_post_finished(void *connection, char *response_uri, u16_t response_uri_len) {
     if (postMetadata.connection == connection) {
+        if (postMetadata.postHander != NULL) {
+            postMetadata.postHander(NULL);
+        }
+
         if (postMetadata.redirectTo != NULL) {
             snprintf(response_uri, response_uri_len, postMetadata.redirectTo);
         }
@@ -251,191 +270,359 @@ static void httpc_unescape(char valBuf[65]) {
     }
 }
 
-static unsigned short httpc_findKey(struct pbuf *p, const char *key, int portId) {
-    char buf[16];
-    int bufLen = 0;
+static unsigned short httpc_parseNextValue(struct pbuf *p, unsigned short *offset) {
+    // find positon of next &
+    // by definition, it cannot be in the post_buffer
+    unsigned short endpos = 0;
+    unsigned short buffer_len = 0;
 
-    if (portId >= 0 && portId < 4) {
-        bufLen = snprintf(buf, sizeof(buf), "%s%i=", key, portId);
+    while (buffer_len < sizeof(post_buffer)) {
+        if (post_buffer[buffer_len] == 0) {
+            break;
+        }
+
+        buffer_len++;
+    }
+
+    for (endpos = *offset; endpos < p->tot_len; endpos++) {
+        if (pbuf_get_at(p, endpos) == '&') {
+            break;
+        }
+    }
+
+    // check if found key-value pair is too large to be valid
+    if (buffer_len + (endpos - *offset) > sizeof(post_buffer)) {
+        *offset = endpos + 1;
+        return 0;
+    }
+
+    if (pbuf_get_at(p, endpos) != '&') {
+        if (post_buffer[0] != 0) {
+            // our value is waaay to long, just discard it
+            post_buffer[0] = 0;
+        } else {
+            if (p->tot_len - *offset < sizeof(post_buffer)) {
+                pbuf_copy_partial(p, post_buffer, p->tot_len - *offset, *offset);
+                post_buffer[p->tot_len - *offset] = 0;
+            } else {
+                // value does not fit temporary buffer, skip
+            }
+        }
+
+        return 0;
     } else {
-        bufLen = snprintf(buf, sizeof(buf), "%s=", key);
-    }
+        pbuf_copy_partial(p, &post_buffer[buffer_len], endpos - *offset, *offset);
 
-    unsigned short find = pbuf_memfind(p, buf, bufLen, 0);
-    if (find != 0xFFFF) {
-        find += bufLen;
+        post_buffer[buffer_len + (endpos - *offset)] = 0;
+        *offset = endpos + 1;
+        return 1;
     }
-    return find;
 }
 
-static char httpc_findValue(struct pbuf *p, char valBuf[65], const char *key, int portId) {
-    unsigned short keyPos = 0;
-    unsigned short end = 0;
-    char *buf;
+static signed char httpc_getValueKey(char **keys, unsigned char keyCount) {
+    unsigned char start = 0;
+    unsigned char end = keyCount - 1;
+    unsigned char i = 0;
 
-    keyPos = httpc_findKey(p, key, portId);
-    memclr(valBuf, 65);
-
-    if (keyPos != 0xFFFF) {
-        end = pbuf_memfind(p, "&", 1, keyPos);
-        if (end == 0xFFFF) {
-            end = p->tot_len;
+    // do a binary search over the keys
+    for (i = 0; i < sizeof(post_buffer); i++) {
+        if (post_buffer[i] == '\0' || post_buffer[i] == '=') {
+            break;
         }
 
-        if (end - keyPos > 64) {
-            end = keyPos + 64;
+        if (keys[start][i] > post_buffer[i]) {
+            return -1;
         }
 
-        buf = pbuf_get_contiguous(p, valBuf, 64, end - keyPos, keyPos);
-
-        if (buf != valBuf) {
-            memcpy(valBuf, buf, end - keyPos);
+        while (keys[start][i] < post_buffer[i] && start < end) {
+            start++;
         }
 
-        valBuf[end - keyPos] = 0;
-        httpc_unescape(valBuf);
+        while (keys[end][i] > post_buffer[i] && end > start) {
+            end--;
+        }
 
-        return 1;
+        if (keys[start][i] != post_buffer[i]) {
+            return -1;
+        }
+    }
+
+    if (start == end) {
+        if (post_buffer[i] == '=') {
+            strncpy(post_buffer, &post_buffer[i + 1], sizeof(post_buffer) - i - 1);
+            httpc_unescape(post_buffer);
+        } else {
+            post_buffer[0] = '1';
+            post_buffer[1] = '\0';
+        }
+        return start;
     } else {
-        return 0;
+        return -1;
     }
 }
 
 // Post-parsers
 static void httpc_parsePortConfig(struct pbuf *p) {
     CONFIG *cfg = Config_GetActive();
-    char valBuf[65];
+    unsigned short offset = 0;
 
-    for (int i = 0; i < 4; i++) {
-        // TODO: create artnet internal handler
-        if (httpc_findKey(p, "output", i) == 0xFFFF) {
-            cfg->ArtNet[i].PortDirection = USART_OUTPUT;
-        } else {
-            cfg->ArtNet[i].PortDirection = USART_INPUT;
-        }
+    static const char *keys[] = {
+        "acn0",
+        "acn1",
+        "acn2",
+        "acn3",
+        "delta0",
+        "delta1",
+        "delta2",
+        "delta3",
+        "description0",
+        "description1",
+        "description2",
+        "description3",
+        "failover0",
+        "failover1",
+        "failover2",
+        "failover3",
+        "inputdisable0",
+        "inputdisable1",
+        "inputdisable2",
+        "inputdisable3",
+        "name0",
+        "name1",
+        "name2",
+        "name3",
+        "output0",
+        "output1",
+        "output2",
+        "output3",
+        "rdm0",
+        "rdm1",
+        "rdm2",
+        "rdm3",
+        "universe0",
+        "universe1",
+        "universe2",
+        "universe3",
+    };
+    static const unsigned char keyCount = 36;
+    static short flags = 0; // Keep track which boolean attributes have already been set during this request, as false values are not transmitted at all
 
-        if (httpc_findValue(p, valBuf, "name", i)) {
-            strncpy(cfg->ArtNet[i].ShortName, valBuf, sizeof(cfg->ArtNet[i].ShortName));
-        }
-
-        if (httpc_findValue(p, valBuf, "description", i)) {
-            strncpy(cfg->ArtNet[i].LongName, valBuf, sizeof(cfg->ArtNet[i].LongName));
-        }
-
-        if (httpc_findValue(p, valBuf, "acn", i)) {
-            unsigned char acn = atoi(valBuf);
-            if (acn >= 0 && acn < 0xFF) {
-                cfg->ArtNet[i].AcnPriority = acn;
+    while (1) {
+        if (p != NULL) {
+            if (httpc_parseNextValue(p, &offset) == 0) {
+                break;
             }
         }
 
-        if (httpc_findKey(p, "inputdisable", i) != 0xFFFF) {
-            cfg->ArtNet[i].PortFlags |= PORT_FLAG_INDISABLED;
-        } else {
-            cfg->ArtNet[i].PortFlags &= ~PORT_FLAG_INDISABLED;
-        }
+        signed char keyIdx = httpc_getValueKey(keys, keyCount);
 
-        if (httpc_findKey(p, "rdm", i) != 0xFFFF) {
-            cfg->ArtNet[i].PortFlags |= PORT_FLAG_RDM;
-        } else {
-            cfg->ArtNet[i].PortFlags &= ~PORT_FLAG_RDM;
-        }
+        if (keyIdx >= 0) {
+            unsigned char i = keyIdx % 4;
 
-        if (httpc_findKey(p, "delta", i) != 0xFFFF) {
-            cfg->ArtNet[i].PortFlags |= PORT_FLAG_SINGLE;
-        } else {
-            cfg->ArtNet[i].PortFlags &= ~PORT_FLAG_SINGLE;
-        }
+            switch (keyIdx / 4) {
+            case 0: // acn
+            {
+                unsigned char acn = atoi(post_buffer);
+                if (acn >= 0 && acn < 0xFF) {
+                    cfg->ArtNet[i].AcnPriority = acn;
+                }
+                break;
+            }
+            case 1: // delta
+                flags |= (1 << (i * 4));
+                cfg->ArtNet[i].PortFlags |= PORT_FLAG_SINGLE;
+                break;
+            case 2: // description
+                strncpy(cfg->ArtNet[i].LongName, post_buffer, sizeof(cfg->ArtNet[i].LongName));
+                break;
+            case 3: // failover
+            {
+                char failover = atoi(post_buffer);
 
-        if (httpc_findValue(p, valBuf, "failover", i)) {
-            char failover = atoi(valBuf);
+                if (failover >= 0 && failover < 4) {
+                    cfg->ArtNet[i].FailoverMode = failover;
+                }
+                break;
+            }
+            case 4: // input disable
+                flags |= (2 << (i * 4));
+                cfg->ArtNet[i].PortFlags |= PORT_FLAG_INDISABLED;
+                break;
+            case 5: // name
+                strncpy(cfg->ArtNet[i].ShortName, post_buffer, sizeof(cfg->ArtNet[i].ShortName));
+                break;
+            case 6: // output
+                flags |= (4 << (i * 4));
+                cfg->ArtNet[i].PortDirection = USART_INPUT;
+                break;
+            case 7: // rdm
+                flags |= (8 << (i * 4));
+                cfg->ArtNet[i].PortFlags |= PORT_FLAG_RDM;
+                break;
+            case 8: // universe
+            {
+                unsigned short universe = atoi(post_buffer);
 
-            if (failover >= 0 && failover < 4) {
-                cfg->ArtNet[i].FailoverMode = failover;
+                cfg->ArtNet[i].Universe = universe & 0x0F;
+                cfg->ArtNet[i].Subnet = (universe >> 4) & 0x0F;
+                cfg->ArtNet[i].Network = (universe >> 8) & 0x7F;
+                break;
+            }
             }
         }
 
-        if (httpc_findValue(p, valBuf, "universe", i)) {
-            unsigned short universe = atoi(valBuf);
+        post_buffer[0] = 0;
 
-            cfg->ArtNet[i].Universe = universe & 0x0F;
-            cfg->ArtNet[i].Subnet = (universe >> 4) & 0x0F;
-            cfg->ArtNet[i].Network = (universe >> 8) & 0x7F;
+        if (p == NULL) {
+            // check flags for unset boolean values and reset them
+            for (int i = 0; i < 4; i++) {
+                if (flags & (1 << (i * 4)) == 0) {
+                    cfg->ArtNet[i].PortFlags &= ~PORT_FLAG_SINGLE;
+                }
+
+                if (flags & (2 << (i * 4)) == 0) {
+                    cfg->ArtNet[i].PortFlags &= ~PORT_FLAG_INDISABLED;
+                }
+
+                if (flags & (4 << (i * 4)) == 0) {
+                    cfg->ArtNet[i].PortDirection = USART_OUTPUT;
+                }
+
+                if (flags & (8 << (i * 4)) == 0) {
+                    cfg->ArtNet[i].PortFlags &= ~PORT_FLAG_RDM;
+                }
+            }
+
+            flags = 0;
+
+            Config_ApplyArtNet();
+            Config_Store();
+
+            break;
         }
     }
-
-    Config_ApplyArtNet();
-    Config_Store();
 }
 
 static void httpc_recordFailover(struct pbuf *p) {
-    for (unsigned char i = 0; i < 4; i++) {
-        if (httpc_findKey(p, "recFailover", i) != 0xFFFF) {
-            unsigned char *buffer = USART_GetDmxBuffer(i);
-            Config_StoreFailsafeScene(buffer, i);
+    unsigned short offset = 0;
+
+    static const char *keys[] = {
+        "recFailover0",
+        "recFailover1",
+        "recFailover2",
+        "recFailover3"};
+
+    static const unsigned char keyCount = 4;
+
+    while (1) {
+        if (p != NULL) {
+            if (httpc_parseNextValue(p, &offset) == 0) {
+                break;
+            }
+        }
+
+        signed char keyIdx = httpc_getValueKey(keys, keyCount);
+
+        if (keyIdx >= 0) {
+            unsigned char *buffer = USART_GetDmxBuffer(keyIdx);
+            Config_StoreFailsafeScene(buffer, keyIdx);
+        }
+
+        post_buffer[0] = 0;
+
+        if (p == NULL) {
+            break;
         }
     }
 }
 
 static void httpc_setIpConfig(struct pbuf *p) {
     CONFIG *cfg = Config_GetActive();
-    char valBuf[65];
+    unsigned short offset = 0;
+
+    static const char *keys[] = {
+        "d_dev",
+        "d_host",
+        "d_mask",
+        "dhcp_en",
+        "ipmode",
+        "s_gw",
+        "s_ip",
+        "s_mask",
+    };
+
+    static const unsigned char keyCount = 8;
+    static unsigned char flags = 0;
     unsigned char ipAddr[4];
+    struct ip4_addr s_ipAddr;
 
-    if (httpc_findValue(p, valBuf, "ipmode", -1)) {
-        char mode = atoi(valBuf);
-
-        if (mode >= 0 && mode < 3) {
-            Config_SetMode(mode);
-        }
-    }
-
-    if (httpc_findValue(p, valBuf, "s_ip", -1)) {
-        httpc_parseIp(valBuf, ipAddr);
-        Config_SetIp(ipAddr);
-    }
-
-    if (httpc_findValue(p, valBuf, "s_mask", -1)) {
-        httpc_parseIp(valBuf, ipAddr);
-        Config_SetNetmask(ipAddr);
-    }
-
-    if (httpc_findValue(p, valBuf, "s_gw", -1)) {
-        httpc_parseIp(valBuf, ipAddr);
-        Config_SetGateway(ipAddr);
-    }
-
-    {
-        char dhcp_en = 0;
-        struct ip4_addr device;
-        struct ip4_addr host;
-        struct ip4_addr netmask;
-
-        if (httpc_findKey(p, "dhcp_en", -1) != 0xFFFF) {
-            dhcp_en = 1;
+    while (1) {
+        if (p != NULL) {
+            if (httpc_parseNextValue(p, &offset) == 0) {
+                break;
+            }
         }
 
-        if (httpc_findValue(p, valBuf, "d_dev", -1)) {
-            ip4addr_aton(valBuf, &device);
-        } else {
-            device = cfg->DhcpServerSelf;
+        signed char keyIdx = httpc_getValueKey(keys, keyCount);
+
+        if (keyIdx >= 0) {
+            switch (keyIdx) {
+            case 0: // d_dev
+                ipaddr_aton(post_buffer, &s_ipAddr);
+                Config_DhcpServer(cfg->DhcpServerEnable, s_ipAddr, cfg->DhcpServerClient, cfg->DhcpServerSubnet);
+                break;
+            case 1: // d_host
+                ipaddr_aton(post_buffer, &s_ipAddr);
+                Config_DhcpServer(cfg->DhcpServerEnable, cfg->DhcpServerSelf, s_ipAddr, cfg->DhcpServerSubnet);
+                break;
+            case 2: // d_mask
+                ipaddr_aton(post_buffer, &s_ipAddr);
+                Config_DhcpServer(cfg->DhcpServerEnable, cfg->DhcpServerSelf, cfg->DhcpServerClient, s_ipAddr);
+                break;
+            case 3: // dhcp_en
+                flags |= 1;
+                Config_DhcpServer(post_buffer[0], cfg->DhcpServerSelf, cfg->DhcpServerClient, cfg->DhcpServerSubnet);
+                break;
+            case 4: // ipmode
+            {
+                char mode = atoi(post_buffer);
+
+                if (mode >= 0 && mode < 3) {
+                    Config_SetMode(mode);
+                }
+                break;
+            }
+            case 5: // s_gw
+                httpc_parseIp(post_buffer, ipAddr);
+                Config_SetGateway(ipAddr);
+                break;
+            case 6: // s_ip
+                httpc_parseIp(post_buffer, ipAddr);
+                Config_SetIp(ipAddr);
+                break;
+            case 7: // s_mask
+                httpc_parseIp(post_buffer, ipAddr);
+                Config_SetNetmask(ipAddr);
+                break;
+            }
         }
 
-        if (httpc_findValue(p, valBuf, "d_host", -1)) {
-            ip4addr_aton(valBuf, &host);
-        } else {
-            host = cfg->DhcpServerClient;
-        }
+        post_buffer[0] = 0;
 
-        if (httpc_findValue(p, valBuf, "d_mask", -1)) {
-            ip4addr_aton(valBuf, &netmask);
-        } else {
-            host = cfg->DhcpServerSubnet;
-        }
+        if (p == NULL) {
+            if((flags & 1) == 0) {
+                Config_DhcpServer(0, cfg->DhcpServerSelf, cfg->DhcpServerClient, cfg->DhcpServerSubnet);
+            }
 
-        Config_DhcpServer(dhcp_en, device, host, netmask);
+            flags = 0;
+
+            // Defer Config_ApplyNetwork until after the post request is completely handled, otherwise hardfault
+            apply_timeout = sys_now();
+            if (apply_timeout == 0)
+                apply_timeout--;
+
+            Config_Store();
+            break;
+        }
     }
-
-    Config_ApplyNetwork();
-    Config_Store();
 }

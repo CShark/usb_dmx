@@ -1,8 +1,5 @@
 # USB ArtNET Interface
 
-> **Warning**  
-> This is a new hardware iteration and currently under development. The previous hardware iteration is not feature complete, but stable and will no longer be maintained except for bugfixes. This iteration is expected to be stable (but not feature complete) somewhere around 2023Q3 if nothing major happens.</p>
-
 This project is a USB ArtNET interface with four ports, based on the STM32G484. It will register itself as an Ethernet Card using the CDC-NCM protocoll to be automatically recognized by most operating systems (except Windows 10, which needs some manual configuration). It will then bind the ArtNET-implementation to a configurable IP on that virtual ethernet card. The device can be configured either using ArtNET commands for software that supports this, using a web interface on the device and it can optionally be extended to include a display module for configuration directly at the device.
 
 <p float="middle">
@@ -21,7 +18,7 @@ The PCB is designed as a four layer board, as with this small size the price was
 ![](/Images/exploded.png)
 
 ### BOM
-The total cost for this device is currently aproximately 90€. You can save money by printing your own case (25€), finding a cheaper STM32G4xxRE variant at your local dealer (11€), finding cheaper XLR connectors (5€) and skipping on the display module (5€). 
+The total cost for this device is currently aproximately 90€. Assembly takes around 6 hours, including soldering the boards, CNC the covers and soldering / crimping the connectors. You can save money by printing your own case (25€), finding a cheaper STM32G4xxRE variant at your local dealer (11€), finding cheaper XLR connectors (5€) and skipping on the display module (5€). 
 
 <details>
 <summary>Mainboard (~40€)</summary>

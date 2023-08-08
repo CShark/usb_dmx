@@ -502,12 +502,16 @@ static void OLED_RenderInvalidValue() {
 static void OLED_NavigateMenu(OLED_Buttons btn) {
     switch (btn) {
     case OLEDB_Up:
-        oledState.SelectedMenuItem--;
-        oledState.SelectedMenuItem = (oledState.SelectedMenuItem + oledState.ActiveScreen->ListSize) % oledState.ActiveScreen->ListSize;
+        if (oledState.ActiveScreen->ListSize > 0) {
+            oledState.SelectedMenuItem--;
+            oledState.SelectedMenuItem = (oledState.SelectedMenuItem + oledState.ActiveScreen->ListSize) % oledState.ActiveScreen->ListSize;
+        }
         break;
     case OLEDB_Down:
-        oledState.SelectedMenuItem++;
-        oledState.SelectedMenuItem = (oledState.SelectedMenuItem + oledState.ActiveScreen->ListSize) % oledState.ActiveScreen->ListSize;
+        if (oledState.ActiveScreen->ListSize > 0) {
+            oledState.SelectedMenuItem++;
+            oledState.SelectedMenuItem = (oledState.SelectedMenuItem + oledState.ActiveScreen->ListSize) % oledState.ActiveScreen->ListSize;
+        }
         break;
     case OLEDB_Confirm: {
         // find next screen
@@ -825,11 +829,14 @@ static void OLED_GetFieldStr(unsigned char i, char *str, unsigned short maxLen) 
 
 static void OLED_InitPort() {
     ARTNET_CONFIG *cfg = &Config_GetActive()->ArtNet[oledState.ActiveScreen->ScreenParameter];
+    short universe = cfg->Universe & 0x0F;
+    universe |= (cfg->Subnet & 0x0F) << 4;
+    universe |= (cfg->Network & 0x7F) << 8;
 
     OLED_SetFieldStr(0, cfg->ShortName, 18);
     OLED_SetFieldStr(1, cfg->LongName, 64);
     OLED_SetFieldList(2, cfg->PortDirection == USART_OUTPUT ? 0 : 1, &opt_portDir, 2);
-    OLED_SetFieldInt(3, cfg->Universe, 0, 32767, 5);
+    OLED_SetFieldInt(3, universe, 0, 32767, 5);
     OLED_SetFieldInt(4, cfg->AcnPriority, 0, 254, 3);
     OLED_SetFieldList(5, (cfg->PortFlags & PORT_FLAG_INDISABLED) != 0 ? 0 : 1, &opt_disabled, 2); // flipped
     OLED_SetFieldList(6, (cfg->PortFlags & PORT_FLAG_RDM) != 0 ? 1 : 0, &opt_disabled, 2);
@@ -869,7 +876,12 @@ static void OLED_ConfirmPort() {
     } else {
         cfg->PortDirection = USART_OUTPUT;
     }
-    cfg->Universe = OLED_GetFieldInt(3);
+
+    short universe = OLED_GetFieldInt(3);
+    cfg->Universe = universe & 0x0F;
+    cfg->Subnet = (universe >> 4) & 0x0F;
+    cfg->Network = (universe >> 8) & 0x7F;
+
     cfg->AcnPriority = OLED_GetFieldInt(4);
     if (OLED_GetFieldList(5)) { // flipped
         cfg->PortFlags &= ~PORT_FLAG_INDISABLED;
@@ -888,7 +900,7 @@ static void OLED_ConfirmPort() {
     }
     cfg->FailoverMode = OLED_GetFieldList(8);
 
-    if(OLED_GetFieldList(9)) {
+    if (OLED_GetFieldList(9)) {
         Config_StoreFailsafeScene(USART_GetDmxBuffer(oledState.ActiveScreen->ScreenParameter), oledState.ActiveScreen->ScreenParameter);
     }
 

@@ -9,7 +9,7 @@
 typedef struct {
     void *connection;
     const char *redirectTo;
-    void (*postHander)(struct pbuf*);
+    void (*postHander)(struct pbuf *);
 } HttpPostData;
 
 void httpc_init(struct netif *netif);
