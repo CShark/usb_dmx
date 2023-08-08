@@ -301,7 +301,7 @@ static void OLED_InitSendData(const unsigned char *buffer, unsigned short len, v
     I2C4->CR2 |= (OLED_I2CADDR << 1);
 
     DMA2_Channel1->CCR = DMA_CCR_MINC | DMA_CCR_DIR;
-    DMA2_Channel1->CPAR = &I2C4->TXDR;
+    DMA2_Channel1->CPAR = (uint32_t)&I2C4->TXDR;
 
     OLED_SendData(buffer, len);
 
@@ -327,7 +327,7 @@ static void OLED_SendData(const unsigned char *buffer, unsigned short len) {
         pending_len = len - 0xFF;
     }
 
-    DMA2_Channel1->CMAR = buffer;
+    DMA2_Channel1->CMAR = (uint32_t)buffer;
     DMA2_Channel1->CCR |= DMA_CCR_EN;
 }
 
@@ -391,8 +391,8 @@ static void OLED_RenderIpOverview() {
 }
 
 static void OLED_RenderMenu() {
-    char next = oledState.SelectedMenuItem + 1;
-    char prev = oledState.SelectedMenuItem - 1;
+    signed char next = oledState.SelectedMenuItem + 1;
+    signed char prev = oledState.SelectedMenuItem - 1;
     unsigned short width;
     unsigned short height;
 
@@ -421,7 +421,7 @@ static void OLED_RenderEdit() {
     OLED_RenderEditFrame(oledState.ActiveScreen->ListItems[i]);
 
     field = &oledState.EditInfo.Fields[i];
-    char *value = field->Value;
+    const char *value = field->Value;
 
     if (field->Mode == OLEDE_List) {
         value = field->ValueList[field->ValueIndex];
@@ -466,8 +466,8 @@ static void OLED_RenderValueSelect() {
         SSD1306_MeasureString(field->ValueList[oledState.EditInfo.SelectedValue], 15, &width, &height, &Dialog_plain_12);
         SSD1306_DrawString(field->ValueList[oledState.EditInfo.SelectedValue], 15, 64 - width / 2, 30 + height / 2, &Dialog_plain_12, 1);
     } else {
-        SSD1306_MeasureString(&oledState.EditInfo.SelectedValue, 1, &width, &height, &Dialog_plain_12);
-        SSD1306_DrawString(&oledState.EditInfo.SelectedValue, 1, 64 - width / 2, 30 + height / 2, &Dialog_plain_12, 1);
+        SSD1306_MeasureString(&oledState.EditInfo.SelectedChar, 1, &width, &height, &Dialog_plain_12);
+        SSD1306_DrawString(&oledState.EditInfo.SelectedChar, 1, 64 - width / 2, 30 + height / 2, &Dialog_plain_12, 1);
     }
 }
 
@@ -558,6 +558,9 @@ static void OLED_NavigateMenu(OLED_Buttons btn) {
             }
         }
         break;
+    default:
+    	// No button, do nothing
+    	break;
     }
 }
 
@@ -569,7 +572,7 @@ static void OLED_NavigateValueSelect(OLED_Buttons btn) {
         if (field->Mode == OLEDE_List) {
             field->ValueIndex = oledState.EditInfo.SelectedValue;
         } else {
-            field->Value[oledState.EditInfo.CursorPosition] = oledState.EditInfo.SelectedValue;
+            field->Value[oledState.EditInfo.CursorPosition] = oledState.EditInfo.SelectedChar;
         }
 
         oledState.EditInfo.Changed = 1;
@@ -590,6 +593,8 @@ static void OLED_NavigateValueSelect(OLED_Buttons btn) {
     case OLEDB_Down:
         oledState.EditInfo.SelectedValue--;
         break;
+    default:
+    	break;
     }
 
     char min = 0x00;
@@ -660,6 +665,8 @@ static void OLED_NavigateEditSelect(OLED_Buttons btn) {
     case OLEDB_Down:
         oledState.EditInfo.CursorPosition++;
         break;
+    default:
+    	break;
     }
 
     oledState.EditInfo.CursorPosition = (oledState.EditInfo.CursorPosition + field->FieldLength) % field->FieldLength;
@@ -721,6 +728,8 @@ static void OLED_NavigateConfirm(OLED_Buttons btn) {
     case OLEDB_Down:
         oledState.EditInfo.SelectedValue = (oledState.EditInfo.SelectedValue + 1) % 2;
         break;
+    default:
+    	break;
     }
 }
 
@@ -778,7 +787,7 @@ static void OLED_GetFieldIp(unsigned char i, ip_addr_t *addr) {
     IP4_ADDR(addr, atoi(field->Value), atoi(&field->Value[4]), atoi(&field->Value[8]), atoi(&field->Value[12]));
 }
 
-static void OLED_SetFieldList(unsigned char i, unsigned char value, char **list, unsigned char listSize) {
+static void OLED_SetFieldList(unsigned char i, unsigned char value, const char **list, unsigned char listSize) {
     oledState.EditInfo.Fields[i].Disabled = 0;
     oledState.EditInfo.Fields[i].Mode = OLEDE_List;
     oledState.EditInfo.Fields[i].ValueIndex = value;

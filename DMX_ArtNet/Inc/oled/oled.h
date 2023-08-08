@@ -36,7 +36,7 @@ typedef struct {
     void (*OnConfirm)();
 
     char ScreenMetadata;
-    char ScreenParameter;
+    unsigned char ScreenParameter;
 
     char **ListItems;
     unsigned short ListSize;
@@ -50,7 +50,7 @@ typedef struct {
         char Value[64];
         struct {
             signed char ValueIndex;
-            char **ValueList;
+            const char **ValueList;
             unsigned char ValueListSize;
         };
     };
@@ -66,7 +66,10 @@ typedef struct {
 
     unsigned char Changed;
     signed char CursorPosition;
-    signed char SelectedValue;
+    union {
+    	signed char SelectedValue;
+    	char SelectedChar;
+    };
 } OLED_EditMetadata;
 
 typedef struct {

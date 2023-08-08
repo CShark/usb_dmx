@@ -319,7 +319,7 @@ static unsigned short httpc_parseNextValue(struct pbuf *p, unsigned short *offse
     }
 }
 
-static signed char httpc_getValueKey(char **keys, unsigned char keyCount) {
+static signed char httpc_getValueKey(const char **keys, const unsigned char keyCount) {
     unsigned char start = 0;
     unsigned char end = keyCount - 1;
     unsigned char i = 0;
@@ -476,19 +476,19 @@ static void httpc_parsePortConfig(struct pbuf *p) {
         if (p == NULL) {
             // check flags for unset boolean values and reset them
             for (int i = 0; i < 4; i++) {
-                if (flags & (1 << (i * 4)) == 0) {
+                if ((flags & (1 << (i * 4))) == 0) {
                     cfg->ArtNet[i].PortFlags &= ~PORT_FLAG_SINGLE;
                 }
 
-                if (flags & (2 << (i * 4)) == 0) {
+                if ((flags & (2 << (i * 4))) == 0) {
                     cfg->ArtNet[i].PortFlags &= ~PORT_FLAG_INDISABLED;
                 }
 
-                if (flags & (4 << (i * 4)) == 0) {
+                if ((flags & (4 << (i * 4))) == 0) {
                     cfg->ArtNet[i].PortDirection = USART_OUTPUT;
                 }
 
-                if (flags & (8 << (i * 4)) == 0) {
+                if ((flags & (8 << (i * 4))) == 0) {
                     cfg->ArtNet[i].PortFlags &= ~PORT_FLAG_RDM;
                 }
             }

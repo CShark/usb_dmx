@@ -1,7 +1,7 @@
 #include "oled/ssd1306.h"
 #include "systimer.h"
 
-static const void (*i2c_send)(unsigned char *buffer, unsigned short len, void (*callback)());
+static const void (*i2c_send)(const unsigned char *buffer, unsigned short len, void (*callback)());
 
 typedef enum {
     S1306C_CmdStream = 0x00,
