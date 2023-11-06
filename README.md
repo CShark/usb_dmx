@@ -7,8 +7,8 @@ This project is a USB ArtNET interface with four ports, based on the STM32G484. 
     <img src="/Images/device_back.png" width="400">
 </p>
 <p float="middle">
-    <img src="/Images/dev_0.jpg" width="400">
-    <img src="/Images/dev_1.jpg" width="400">
+    <img src="/Images/dev_0.JPG" width="400">
+    <img src="/Images/dev_1.JPG" width="400">
 </p>
 
 ## Schematic
