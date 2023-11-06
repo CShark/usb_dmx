@@ -18,11 +18,6 @@ static char event_ignore = 0;
 /* Private function prototypes ---------------------------------------*/
 /* -------------------------------------------------------------------*/
 
-int _write(int file, unsigned char *data, int len) {
-    //CDC_TransmitData(data, len);
-    return len;
-}
-
 /**
  * @brief Start profiler, save profiler name and start time
  *
