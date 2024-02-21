@@ -462,6 +462,10 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
                     USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
                 }
                 break;
+            default:
+                // Unknown & Unhandled command
+                USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
+                break;
             }
         } else if ((setup->RequestType & 0x0F) == 0x01) { // Interface requests
             switch (setup->Request) {
@@ -497,6 +501,10 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
                 } else {
                     USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
                 }
+                break;
+            default:
+                // Unknown & Unhandled command
+                USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
                 break;
             }
         } else if ((setup->RequestType & 0x0F) == 0x02) { // Endpoint requests
@@ -541,6 +549,10 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
                 }
                 break;
             case 0x0C: // Sync Frame
+                USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
+                break;
+            default:
+                // Unknown & Unhandled command
                 USB_SetEP(&USB->EP0R, USB_EP_TX_STALL, USB_EP_TX_VALID);
                 break;
             }

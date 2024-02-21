@@ -844,7 +844,7 @@ static void OLED_InitPort() {
 
     OLED_SetFieldStr(0, cfg->ShortName, 18);
     OLED_SetFieldStr(1, cfg->LongName, 64);
-    OLED_SetFieldList(2, cfg->PortDirection == USART_OUTPUT ? 0 : 1, &opt_portDir, 2);
+    OLED_SetFieldList(2, cfg->PortDirection == USART_MODE_OUTPUT ? 0 : 1, &opt_portDir, 2);
     OLED_SetFieldInt(3, universe, 0, 32767, 5);
     OLED_SetFieldInt(4, cfg->AcnPriority, 0, 254, 3);
     OLED_SetFieldList(5, (cfg->PortFlags & PORT_FLAG_INDISABLED) != 0 ? 0 : 1, &opt_disabled, 2); // flipped
@@ -881,9 +881,9 @@ static void OLED_ConfirmPort() {
     OLED_GetFieldStr(0, cfg->ShortName, 18);
     OLED_GetFieldStr(1, cfg->LongName, 64);
     if (OLED_GetFieldList(2)) {
-        cfg->PortDirection = USART_INPUT;
+        cfg->PortDirection = USART_MODE_INPUT;
     } else {
-        cfg->PortDirection = USART_OUTPUT;
+        cfg->PortDirection = USART_MODE_OUTPUT;
     }
 
     short universe = OLED_GetFieldInt(3);

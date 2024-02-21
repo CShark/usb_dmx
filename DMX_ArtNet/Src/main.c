@@ -46,27 +46,27 @@ int main(void) {
     Systick_Init();
     GPIO_Init();
 
-    USB_Init();
-    USART_Init();
+    //USB_Init();
 
-    lwip_init();
-    httpd_init();
-    igmp_init();
-    mdns_resp_init();
+    //lwip_init();
+    //httpd_init();
+    //igmp_init();
+    //mdns_resp_init();
 
-    netif_add(&ncm_if, IP4_ADDR_ANY, IP4_ADDR_ANY, IP4_ADDR_ANY, NULL, ncm_netif_init, netif_input);
-    netif_set_default(&ncm_if);
-    netif_set_up(&ncm_if);
+    //netif_add(&ncm_if, IP4_ADDR_ANY, IP4_ADDR_ANY, IP4_ADDR_ANY, NULL, ncm_netif_init, netif_input);
+    //netif_set_default(&ncm_if);
+    //netif_set_up(&ncm_if);
 
     ReadPortConfig();
 
-    DhcpServer_Init();
+    //DhcpServer_Init();
     Config_Init(&ncm_if, portConfig);
-    ArtNet_Init(&ncm_if);
-    httpc_init(&ncm_if);
+    USART_Init(Config_GetActive());
+    //ArtNet_Init(&ncm_if);
+    //httpc_init(&ncm_if);
 
-    igmp_start(&ncm_if);
-    mdns_resp_add_netif(&ncm_if, "artnet", 3600);
+    //igmp_start(&ncm_if);
+    //mdns_resp_add_netif(&ncm_if, "artnet", 3600);
 
     OLED_Init();
 
@@ -75,38 +75,38 @@ int main(void) {
     unsigned int resetTimer = 0;
 
     while (1) {
-        ncm_netif_poll(&ncm_if);
+    //     ncm_netif_poll(&ncm_if);
 
-        if (sys_now() - last_inputTick > 24) {
-            if (sys_now() - last_forcedInputTick > 1000) {
-                ArtNet_InputTick(1);
-                last_forcedInputTick = sys_now();
-            } else {
-                ArtNet_InputTick(0);
-            }
+    //     if (sys_now() - last_inputTick > 24) {
+    //         if (sys_now() - last_forcedInputTick > 1000) {
+    //             ArtNet_InputTick(1);
+    //             last_forcedInputTick = sys_now();
+    //         } else {
+    //             ArtNet_InputTick(0);
+    //         }
 
-            NCM_FlushTx();
-            last_inputTick = sys_now();
-        }
+    //         NCM_FlushTx();
+    //         last_inputTick = sys_now();
+    //     }
 
-        sys_check_timeouts();
-        ArtNet_TimeoutTick();
-        httpc_timeout();
-        OLED_Tick();
+    //     sys_check_timeouts();
+    //     ArtNet_TimeoutTick();
+    //     httpc_timeout();
+           OLED_Tick();
 
-        // Reset button
-        if (GPIOA->IDR & (1 << 5)) {
-            if (resetTimer != 0) {
-                if (sys_now() - resetTimer > 5000) {
-                    Config_Reset();
-                    resetTimer = 0;
-                }
-            } else {
-                resetTimer = sys_now();
-            }
-        } else {
-            resetTimer = 0;
-        }
+    //     // Reset button
+    //     if (GPIOA->IDR & (1 << 5)) {
+    //         if (resetTimer != 0) {
+    //             if (sys_now() - resetTimer > 5000) {
+    //                 Config_Reset();
+    //                 resetTimer = 0;
+    //             }
+    //         } else {
+    //             resetTimer = sys_now();
+    //         }
+    //     } else {
+    //         resetTimer = 0;
+    //     }
     }
 }
 
@@ -124,9 +124,9 @@ static void ReadPortConfig() {
     // detect configuration, port mapping is reverse to ports
     for (int i = 0; i < 4; i++) {
         if ((GPIOA->IDR & (1 << (3 - i))) != 0) {
-            portConfig[i] = USART_INPUT;
+            portConfig[i] = ARTNET_INPUT;
         } else {
-            portConfig[i] = USART_OUTPUT;
+            portConfig[i] = ARTNET_OUTPUT;
         }
     }
 

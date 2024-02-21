@@ -8,6 +8,9 @@
 #define ARTNET_SUB 0
 #define ARTNET_UNI 0
 
+#define ARTNET_INPUT 1
+#define ARTNET_OUTPUT 0
+
 #pragma pack(4) // 4 Byte alignment for flash storage
 typedef enum {
     CONFIGIP_Auto = 0,
@@ -24,7 +27,7 @@ typedef struct {
     char Subnet;
     char Universe;
 
-    char PortDirection; // First Bit = enable override, second bit (1 = Input, 0 = Output)
+    char PortDirection;
     ArtNet_Port_Flags PortFlags;
     ArtNet_Failover FailoverMode;
     unsigned char AcnPriority;

@@ -32,28 +32,6 @@ void ArtNet_Init(struct netif *netif) {
     ip_set_option(artnet, SOF_BROADCAST);
 
     config = Config_GetActive();
-
-    // Initial directions
-    static unsigned char artnet_portConfig[4];
-    for (int i = 0; i < 4; i++) {
-        artnet_portConfig[i] = config->ArtNet[i].PortDirection;
-    }
-
-    USART_InitPortDirections(artnet_portConfig);
-
-    for (int i = 0; i < 4; i++) {
-        if (config->ArtNet[i].PortFlags & PORT_FLAG_RDM) {
-            USART_AlterPortFlags(i, PORT_FLAG_RDM, 1);
-        }
-
-        if (config->ArtNet[i].PortFlags & PORT_FLAG_SINGLE) {
-            USART_AlterPortFlags(i, PORT_FLAG_SINGLE, 1);
-        }
-
-        if(config->ArtNet[i].PortFlags & PORT_FLAG_INDISABLED) {
-            USART_AlterPortFlags(i, PORT_FLAG_INDISABLED, 1);
-        }
-    }
 }
 
 static void ArtNet_Receive(void *arg, struct udp_pcb *pcb, struct pbuf *p, const ip_addr_t *addr, u16_t port) {
@@ -279,10 +257,10 @@ static void ArtNet_HandleAddress(ArtNet_Address *data, const ip_addr_t *addr, u1
             break;
 
         case 0x20: // Output
-            config->ArtNet[data->BindIndex].PortDirection = USART_OUTPUT;
+            config->ArtNet[data->BindIndex].PortDirection = ARTNET_OUTPUT;
             break;
         case 0x30: // Input
-            config->ArtNet[data->BindIndex].PortDirection = USART_INPUT;
+            config->ArtNet[data->BindIndex].PortDirection = ARTNET_INPUT;
             break;
         }
     } else {
@@ -306,7 +284,7 @@ static void ArtNet_HandleAddress(ArtNet_Address *data, const ip_addr_t *addr, u1
         }
     }
 
-    if (config->ArtNet[data->BindIndex].PortDirection == USART_OUTPUT) {
+    if (config->ArtNet[data->BindIndex].PortDirection == ARTNET_OUTPUT) {
         if (data->SwOut[0] & 0x80) {
             config->ArtNet[data->BindIndex].Universe = data->SwOut[0] & ~0x80;
         } else if (data->SwOut[0] == 0) {
@@ -377,7 +355,7 @@ static void ArtNet_ApplyFailover(int idx) {
 
 void ArtNet_InputTick(char forceTransmit) {
     for (int i = 0; i < 4; i++) {
-        if ((config->ArtNet[i].PortDirection == USART_INPUT) && ((config->ArtNet[i].PortFlags & PORT_FLAG_INDISABLED) == 0)) {
+        if ((config->ArtNet[i].PortDirection == ARTNET_INPUT) && ((config->ArtNet[i].PortFlags & PORT_FLAG_INDISABLED) == 0)) {
             if (USART_IsInputNew(i) || forceTransmit) {
                 USART_ClearInputNew(i);
 

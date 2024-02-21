@@ -13,7 +13,8 @@
         "cmsis_armclang.h": "c",
         "cmsis_armclang_ltm.h": "c",
         "cmsis_gcc.h": "c",
-        "config.h": "c"
+        "config.h": "c",
+        "platform.h": "c"
     },
     "cmake.configureOnOpen": false
 }
