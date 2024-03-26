@@ -8,6 +8,7 @@
 #include "lwip/ip_addr.h"
 #include "lwip/netif.h"
 #include "oled/oled.h"
+#include "rdm.h"
 #include "usart.h"
 
 static struct netif *netif;
@@ -100,6 +101,7 @@ void Config_ApplyArtNet() {
     for (int i = 0; i < 4; i++) {
         DMX_SetInDisabled(i, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_INDISABLED);
         DMX_SetSingleMode(i, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_SINGLE);
+        RDM_SetEnabled(i, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_RDM);
 
         USART_ChangeDirection(i, activeConfig.ArtNet[i].PortDirection);
     }
