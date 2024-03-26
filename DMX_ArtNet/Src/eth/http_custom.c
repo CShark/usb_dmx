@@ -85,7 +85,7 @@ int fs_open_custom(struct fs_file *file, const char *name) {
         }
 
         file->len = snprintf(file_buffer, sizeof(file_buffer), artnet_template,
-                             (cfg->ArtNet[id].PortDirection == USART_MODE_INPUT) ? 1 : 0,
+                             (cfg->ArtNet[id].PortDirection == ARTNET_INPUT) ? 1 : 0,
                              ((cfg->ArtNet[id].Network & 0x7F) << 8) | ((cfg->ArtNet[id].Subnet & 0x0F) << 4) | cfg->ArtNet[id].Universe,
                              cfg->ArtNet[id].ShortName,
                              cfg->ArtNet[id].LongName,
@@ -453,7 +453,7 @@ static void httpc_parsePortConfig(struct pbuf *p) {
                 break;
             case 6: // output
                 flags |= (4 << (i * 4));
-                cfg->ArtNet[i].PortDirection = USART_MODE_INPUT;
+                cfg->ArtNet[i].PortDirection = ARTNET_INPUT;
                 break;
             case 7: // rdm
                 flags |= (8 << (i * 4));
@@ -485,7 +485,7 @@ static void httpc_parsePortConfig(struct pbuf *p) {
                 }
 
                 if ((flags & (4 << (i * 4))) == 0) {
-                    cfg->ArtNet[i].PortDirection = USART_MODE_OUTPUT;
+                    cfg->ArtNet[i].PortDirection = ARTNET_OUTPUT;
                 }
 
                 if ((flags & (8 << (i * 4))) == 0) {
@@ -524,7 +524,7 @@ static void httpc_recordFailover(struct pbuf *p) {
         signed char keyIdx = httpc_getValueKey(keys, keyCount);
 
         if (keyIdx >= 0) {
-            unsigned char *buffer = USART_GetDmxBuffer(keyIdx);
+            unsigned char *buffer = DMX_GetBuffer(keyIdx);
             Config_StoreFailsafeScene(buffer, keyIdx);
         }
 

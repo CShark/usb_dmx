@@ -42,7 +42,7 @@ static const ARTNET_CONFIG_DESCRIPTOR ConfigDescriptor = {
         .ConfigurationID = 1,
         .strConfiguration = 0,
         .Attributes = (1 << 7),
-        .MaxPower = 50,
+        .MaxPower = 100,
     },
     .ncm_if = {
         .Length = sizeof(USB_DESCRIPTOR_INTERFACE),

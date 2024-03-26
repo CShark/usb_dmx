@@ -8,8 +8,8 @@
 #define ARTNET_SUB 0
 #define ARTNET_UNI 0
 
-#define ARTNET_INPUT 1
-#define ARTNET_OUTPUT 0
+#define ARTNET_INPUT 0
+#define ARTNET_OUTPUT 1
 
 #pragma pack(4) // 4 Byte alignment for flash storage
 typedef enum {

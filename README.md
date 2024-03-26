@@ -12,7 +12,7 @@ This project is a USB ArtNET interface with four ports, based on the STM32G484. 
 </p>
 
 ## Schematic
-The project uses an STM32G484RE, but should work with any STM32G4xxRE variant. The ports are controlled by a MAX3440E each, which will provide some ESD protection in addition to the TVS-Diodes. The device will draw at most 300mA to 400mA, which is easily delivered by USB2.0 ports. Galvanic isolation was omitted because it needs too much space and because it is not recommended for the transmitting ports of DMX-Devices anyway (although it is recommended for receiving ports, but not mandatory).
+The project uses an STM32G484RE, but should work with any STM32G4xxRE variant. The ports are controlled by a MAX3440E each, which will provide some ESD protection in addition to the TVS-Diodes. The device will draw around ~150mA, which is easily delivered by USB2.0 ports. Galvanic isolation was omitted because it needs too much space and because it is not recommended for the transmitting ports of DMX-Devices anyway (although it is recommended for receiving ports, but not mandatory).
 
 ![](/Images/mainboard.png)
 

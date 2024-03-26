@@ -1,6 +1,5 @@
 #include "config.h"
-#include "dmx_usart.h"
-#include "oled/oled.h"
+#include "dmx.h"
 #include "eth/dhcp_server.h"
 #include "flash_ee.h"
 #include "lwip/apps/mdns.h"
@@ -8,6 +7,8 @@
 #include "lwip/dhcp.h"
 #include "lwip/ip_addr.h"
 #include "lwip/netif.h"
+#include "oled/oled.h"
+#include "usart.h"
 
 static struct netif *netif;
 static const unsigned char *initialPortConfig;
@@ -97,11 +98,10 @@ void Config_ApplyNetwork() {
 
 void Config_ApplyArtNet() {
     for (int i = 0; i < 4; i++) {
-        USART_AlterPortFlags(i, PORT_FLAG_INDISABLED, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_INDISABLED);
-        USART_AlterPortFlags(i, PORT_FLAG_RDM, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_RDM);
-        USART_AlterPortFlags(i, PORT_FLAG_SINGLE, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_SINGLE);
+        DMX_SetInDisabled(i, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_INDISABLED);
+        DMX_SetSingleMode(i, activeConfig.ArtNet[i].PortFlags & PORT_FLAG_SINGLE);
 
-        USART_ChangePortDirection(i, activeConfig.ArtNet[i].PortDirection);
+        USART_ChangeDirection(i, activeConfig.ArtNet[i].PortDirection);
     }
 }
 

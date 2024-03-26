@@ -1,6 +1,6 @@
 #include "eth/artnet.h"
 #include "config.h"
-#include "dmx_usart.h"
+#include "dmx.h"
 #include "eth/global.h"
 #include "lwip/autoip.h"
 #include "platform.h"
@@ -241,7 +241,7 @@ static void ArtNet_HandleAddress(ArtNet_Address *data, const ip_addr_t *addr, u1
     if (cmd > 0 && idx == 0) {
         switch (cmd) {
         case 0x90:
-            USART_ClearBuffer(data->BindIndex);
+            DMX_ClearBuffer(data->BindIndex);
             break;
         case 0xA0:
             config->ArtNet[data->BindIndex].PortFlags |= PORT_FLAG_SINGLE;
@@ -279,7 +279,7 @@ static void ArtNet_HandleAddress(ArtNet_Address *data, const ip_addr_t *addr, u1
             config->ArtNet[data->BindIndex].FailoverMode = ArtFail_Scene;
             break;
         case 0x0C:
-            Config_StoreFailsafeScene(USART_GetDmxBuffer(data->BindIndex), data->BindIndex);
+            Config_StoreFailsafeScene(DMX_GetBuffer(data->BindIndex), data->BindIndex);
             break;
         }
     }
@@ -323,7 +323,7 @@ static void ArtNet_HandleOutput(ArtNet_Dmx *data) {
         for (int i = 0; i < 4; i++) {
             if (config->ArtNet[i].Subnet == sub && config->ArtNet[i].Network == net) {
                 if (uni == config->ArtNet[i].Universe) {
-                    USART_SetBuffer(i, data->Data, data->Length);
+                    DMX_SetBuffer(i, data->Data, data->Length);
                     artnet_timeout[i] = sys_now();
                     artnet_failover_state[i] = 0;
                 }
@@ -338,16 +338,16 @@ static void ArtNet_ApplyFailover(int idx) {
         case ArtFail_Hold:
             break;
         case ArtFail_Zero:
-            memclr(USART_GetDmxBuffer(idx), 512);
+            DMX_ClearBuffer(idx);
             break;
         case ArtFail_Full: {
-            unsigned char *buffer = USART_GetDmxBuffer(idx);
+            unsigned char *buffer = DMX_GetBuffer(idx);
             for (int i = 0; i < 512; i++) {
                 buffer[i] = 0xFF;
             }
         } break;
         case ArtFail_Scene:
-            Config_LoadFailsafeScene(USART_GetDmxBuffer(idx), idx);
+            Config_LoadFailsafeScene(DMX_GetBuffer(idx), idx);
             break;
         }
     }
@@ -356,9 +356,7 @@ static void ArtNet_ApplyFailover(int idx) {
 void ArtNet_InputTick(char forceTransmit) {
     for (int i = 0; i < 4; i++) {
         if ((config->ArtNet[i].PortDirection == ARTNET_INPUT) && ((config->ArtNet[i].PortFlags & PORT_FLAG_INDISABLED) == 0)) {
-            if (USART_IsInputNew(i) || forceTransmit) {
-                USART_ClearInputNew(i);
-
+            if (DMX_IsInputNew(i) || forceTransmit) {
                 // Send input
                 memclr(net_buffer, sizeof(net_buffer));
                 ArtNet_Dmx *reply = (ArtNet_Dmx *)net_buffer;
@@ -370,7 +368,7 @@ void ArtNet_InputTick(char forceTransmit) {
                 reply->SubUni = ((config->ArtNet[i].Subnet & 0x0F) << 4) | (config->ArtNet[i].Universe & 0x0F);
                 reply->Length = UI16_LITTLE_ENDIAN(512);
 
-                unsigned char *buffer = USART_GetDmxBuffer(i);
+                unsigned char *buffer = DMX_GetBuffer(i);
                 memcpy(reply->Data, buffer, 512);
 
                 struct pbuf *p;

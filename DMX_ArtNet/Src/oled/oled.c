@@ -1,6 +1,6 @@
 #include "oled/oled.h"
 #include "config.h"
-#include "dmx_usart.h"
+#include "dmx.h"
 #include "lwip/netif.h"
 #include "oled/fonts.h"
 
@@ -559,8 +559,8 @@ static void OLED_NavigateMenu(OLED_Buttons btn) {
         }
         break;
     default:
-    	// No button, do nothing
-    	break;
+        // No button, do nothing
+        break;
     }
 }
 
@@ -594,7 +594,7 @@ static void OLED_NavigateValueSelect(OLED_Buttons btn) {
         oledState.EditInfo.SelectedValue--;
         break;
     default:
-    	break;
+        break;
     }
 
     char min = 0x00;
@@ -666,7 +666,7 @@ static void OLED_NavigateEditSelect(OLED_Buttons btn) {
         oledState.EditInfo.CursorPosition++;
         break;
     default:
-    	break;
+        break;
     }
 
     oledState.EditInfo.CursorPosition = (oledState.EditInfo.CursorPosition + field->FieldLength) % field->FieldLength;
@@ -729,7 +729,7 @@ static void OLED_NavigateConfirm(OLED_Buttons btn) {
         oledState.EditInfo.SelectedValue = (oledState.EditInfo.SelectedValue + 1) % 2;
         break;
     default:
-    	break;
+        break;
     }
 }
 
@@ -844,7 +844,7 @@ static void OLED_InitPort() {
 
     OLED_SetFieldStr(0, cfg->ShortName, 18);
     OLED_SetFieldStr(1, cfg->LongName, 64);
-    OLED_SetFieldList(2, cfg->PortDirection == USART_MODE_OUTPUT ? 0 : 1, &opt_portDir, 2);
+    OLED_SetFieldList(2, cfg->PortDirection == ARTNET_OUTPUT ? 0 : 1, &opt_portDir, 2);
     OLED_SetFieldInt(3, universe, 0, 32767, 5);
     OLED_SetFieldInt(4, cfg->AcnPriority, 0, 254, 3);
     OLED_SetFieldList(5, (cfg->PortFlags & PORT_FLAG_INDISABLED) != 0 ? 0 : 1, &opt_disabled, 2); // flipped
@@ -881,9 +881,9 @@ static void OLED_ConfirmPort() {
     OLED_GetFieldStr(0, cfg->ShortName, 18);
     OLED_GetFieldStr(1, cfg->LongName, 64);
     if (OLED_GetFieldList(2)) {
-        cfg->PortDirection = USART_MODE_INPUT;
+        cfg->PortDirection = ARTNET_INPUT;
     } else {
-        cfg->PortDirection = USART_MODE_OUTPUT;
+        cfg->PortDirection = ARTNET_OUTPUT;
     }
 
     short universe = OLED_GetFieldInt(3);
@@ -910,7 +910,7 @@ static void OLED_ConfirmPort() {
     cfg->FailoverMode = OLED_GetFieldList(8);
 
     if (OLED_GetFieldList(9)) {
-        Config_StoreFailsafeScene(USART_GetDmxBuffer(oledState.ActiveScreen->ScreenParameter), oledState.ActiveScreen->ScreenParameter);
+        Config_StoreFailsafeScene(DMX_GetBuffer(oledState.ActiveScreen->ScreenParameter), oledState.ActiveScreen->ScreenParameter);
     }
 
     Config_ApplyArtNet();
