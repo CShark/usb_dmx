@@ -9,8 +9,8 @@
 #include "stm32g4xx.h"
 
 // String representation and continuous number for firmware revisions
-#define FIRMWARE_VER "2.0"
-#define FIRMWARE_INT 4
+#define FIRMWARE_VER "2.1"
+#define FIRMWARE_INT 5
 
 #pragma pack(1)
 typedef struct {
