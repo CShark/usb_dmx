@@ -14,7 +14,9 @@
         "cmsis_armclang_ltm.h": "c",
         "cmsis_gcc.h": "c",
         "config.h": "c",
-        "platform.h": "c"
+        "platform.h": "c",
+        "dmx.h": "c",
+        "netif.h": "c"
     },
     "cmake.configureOnOpen": false
 }

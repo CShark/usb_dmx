@@ -126,7 +126,7 @@ void USART_UpdateInputEnabled(unsigned char i) {
     }
 }
 
-void USART_Transmit(USART_PortConfig *port, const unsigned char *buffer, unsigned short length, void (*callback)(USART_PortConfig*)) {
+void USART_Transmit(USART_PortConfig *port, const unsigned char *buffer, unsigned short length, void (*callback)(USART_PortConfig *)) {
     USART_SetTx(port);
     port->RxTxMetadata.Buffer = buffer;
     port->RxTxMetadata.Length = length;
@@ -164,6 +164,13 @@ static void USART_HandleIRQ(USART_PortConfig *port) {
         if (port->Usart->ISR & USART_ISR_FE) {
             port->Usart->ICR = USART_ICR_FECF;
 
+            if (port->RxTxMetadata.Status == USART_RxTxState_Data) {
+                if (port->RxTxMetadata.Callback != NULL) {
+                    port->RxTxMetadata.Callback(port);
+                    port->RxTxMetadata.Callback = NULL;
+                }
+            }
+
             // Break detected, start reception
             USART_DisableDma(port);
             port->RxTxMetadata.Status = USART_RxTxState_Break;
@@ -183,12 +190,14 @@ static void USART_HandleIRQ(USART_PortConfig *port) {
 
                         USART_RxDma(port, port->RxTxMetadata.Buffer, port->RxTxMetadata.Length);
                     }
-                }else if(data == USART_SC_RDM) {
-
-                }else{
+                } else if (data == USART_SC_RDM) {
+                }
+            } else if (port->RxTxMetadata.Status == USART_RxTxState_Data) {
+                if (DMA1->ISR & (DMA_ISR_TCIF1 << port->DmaIFCR_Offset)) {
+                    DMA1->IFCR = DMA_IFCR_CTCIF1 << port->DmaIFCR_Offset;
                     port->RxTxMetadata.Status = USART_RxTxState_Idle;
 
-                    if(port->RxTxMetadata.Callback != NULL) {
+                    if (port->RxTxMetadata.Callback != NULL) {
                         port->RxTxMetadata.Callback(port);
                         port->RxTxMetadata.Callback = NULL;
                     }
@@ -229,7 +238,7 @@ static void USART_SetTx(USART_PortConfig *port) {
         // Configure driver & DMA
         port->DRPort->BSRR = 1 << port->DRPin;
         port->Dma->CPAR = &(port->Usart->TDR);
-        port->Dma->CCR = DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_TCIE;
+        port->Dma->CCR = DMA_CCR_MINC | DMA_CCR_DIR;
         port->DmaMux->CCR = port->DmaMux_TX;
 
         // Set port state
@@ -310,4 +319,20 @@ void USART3_IRQHandler() {
 
 void UART4_IRQHandler() {
     USART_HandleIRQ(&usart_config[2]);
+}
+
+void DMA1_Channel1_IRQHandler() {
+    USART_HandleIRQ(&usart_config[0]);
+}
+
+void DMA1_Channel2_IRQHandler() {
+    USART_HandleIRQ(&usart_config[1]);
+}
+
+void DMA1_Channel3_IRQHandler() {
+    USART_HandleIRQ(&usart_config[2]);
+}
+
+void DMA1_Channel4_IRQHanlder() {
+    USART_HandleIRQ(&usart_config[3]);
 }
