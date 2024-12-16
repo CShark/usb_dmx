@@ -357,10 +357,11 @@ static void USB_HandleSetup(USB_SETUP_PACKET *setup) {
                 switch (setup->DescriptorType) {
                 case 0x01: { // Device Descriptor
                     const USB_DESCRIPTOR_DEVICE *descriptor = USB_GetDeviceDescriptor();
-                    USB_CopyToUsb(descriptor, EP0_Buf[1], sizeof(USB_DESCRIPTOR_DEVICE));
-                    BTable[0].COUNT_TX = sizeof(USB_DESCRIPTOR_DEVICE);
+                    ControlState.Transfer.Buffer = descriptor;
+                    ControlState.Transfer.BytesSent = 0;
+                    ControlState.Transfer.Length = MIN(sizeof(USB_DESCRIPTOR_DEVICE), setup->Length);
 
-                    USB_SetEP(&USB->EP0R, USB_EP_TX_VALID, USB_EP_TX_VALID);
+                    USB_PrepareTransfer(&ControlState.Transfer, &USB->EP0R, &EP0_Buf[1][0], &BTable[0].COUNT_TX, 64);
                 } break;
                 case 0x02: { // Configuration Descriptor
                     unsigned short length;
